@@ -23,7 +23,7 @@ agentcore deploy</code></pre></div>
 </li>
 
 <li>
-  <p>Arriva una proposta: passare da Claude Sonnet 5.5 a Claude Haiku 4.5, più veloce e meno caro, e dare del Lei ai clienti. Pubblicala: va su <code>DEFAULT</code>, non su <code>produzione</code>.</p>
+  <p>Arriva una proposta: passare da Claude Sonnet 5.5 a Claude Haiku 4.5, più veloce e meno caro, e dare sempre del Lei ai clienti. Pubblicala: va su <code>DEFAULT</code>, non su <code>produzione</code>.</p>
   <div class="blocco"><pre><code>cp ../risorse/lab2/main.py app/agent/main.py
 cp ../risorse/lab2/load.py app/agent/model/load.py
 agentcore deploy
@@ -37,14 +37,14 @@ agentcore runtime endpoint list --id $(python3 ../scripts/id.py runtime)</code><
   <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --endpoint produzione --utente mario --sessione prod "Sono il cliente C001, che offerta ho?"
 python3 ../scripts/chiedi.py --utente mario --sessione nuova "Sono il cliente C001, che offerta ho?"</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
-  <code>produzione</code> risponde come prima. <code>DEFAULT</code> dà del Lei: è la versione nuova. I clienti non l'hanno vista.</div>
+  Due risposte corrette e spesso simili: anche Sonnet a volte dà del Lei. Il testo non basta a dire quale versione ha risposto; lo dice l'endpoint. I clienti, che chiamano <code>produzione</code>, non hanno visto la versione nuova.</div>
 </li>
 
 <li>
   <p>Prima di promuovere, il cancello del Lab 1 sulla versione nuova.</p>
   <div class="blocco"><pre><code>bash ../scripts/prove.sh DEFAULT</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
-  Nella nostra prova il cancello si è chiuso, con 5 prove superate su 8. Nella prova <code>accredito-motivato</code> la versione con Haiku ha emesso <strong>due accrediti senza leggere la fattura</strong>:
+  Nelle nostre due prove il cancello si è chiuso entrambe le volte, con 5 e poi 7 prove superate su 8. Nella prima, nella prova <code>accredito-motivato</code>, la versione con Haiku ha emesso <strong>due accrediti senza leggere la fattura</strong>:
   <pre class="uscita">accredito-motivato    NO                        NO
     TrajectoryAnyOrderMatch: Any-order mismatch: Missing tools: 'crm___get_fatture' ...
     Actual: ['crm___emetti_accredito', 'crm___emetti_accredito']
@@ -60,7 +60,7 @@ CANCELLO CHIUSO: questa versione non va rilasciata.</pre>
 python3 ../scripts/punta_endpoint.py produzione $VERSIONE_NUOVA
 agentcore deploy
 python3 ../scripts/chiedi.py --endpoint produzione --utente mario --sessione prod2 "Sono il cliente C001, che offerta ho?"</code></pre></div>
-  <p><code>produzione</code> ora dà del Lei: i clienti vedono la versione con Haiku.</p>
+  <p>Controlla con <code>agentcore runtime endpoint list --id $(python3 ../scripts/id.py runtime)</code>: ora <code>produzione</code> serve la versione con Haiku, cioè la vedono i clienti.</p>
 </li>
 
 <li>
@@ -69,7 +69,7 @@ python3 ../scripts/chiedi.py --endpoint produzione --utente mario --sessione pro
 agentcore deploy
 python3 ../scripts/chiedi.py --endpoint produzione --utente mario --sessione prod3 "Sono il cliente C001, che offerta ho?"</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
-  <code>produzione</code> torna alla versione di prima. Nelle nostre prove sia la promozione sia il ritorno indietro hanno richiesto circa 70 secondi ciascuno. Il codice non si ricostruisce: cambia solo la versione a cui punta l'endpoint.</div>
+  <code>agentcore runtime endpoint list</code> mostra <code>produzione</code> di nuovo sulla versione buona. Nelle nostre prove sia la promozione sia il ritorno indietro hanno richiesto circa 70 secondi ciascuno. Il codice non si ricostruisce: cambia solo la versione a cui punta l'endpoint.</div>
 </li>
 </ol>
 

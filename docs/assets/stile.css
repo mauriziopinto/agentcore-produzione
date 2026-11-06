@@ -58,10 +58,13 @@ nav.indice a {
   text-decoration: none;
   font-size: 15px;
   border-left: 3px solid transparent;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 nav.indice a:hover { background: #eceff3; }
 nav.indice a.attivo { border-left-color: var(--arancio); background: #fff; font-weight: 600; }
-nav.indice .durata { color: var(--grigio); font-size: 13px; float: right; }
+nav.indice .durata { color: var(--grigio); font-size: 13px; flex-shrink: 0; padding-top: 2px; }
 nav.indice .gruppo { padding: 14px 24px 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--grigio); }
 
 main {

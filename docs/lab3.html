@@ -35,7 +35,7 @@
   echo "-----"
 done</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
-  In almeno una delle tre prove, una riga <code>[strumento] crm___emetti_accredito</code>: l'agente ha obbedito alla pagina. Nelle nostre prove Haiku ci è cascato 4 volte su 8, e una volta ha scritto <em>"Vedo che Lei ha diritto al bonus fedeltà di novembre e procedo a registrare l'accredito."</em></div>
+  In almeno una delle tre prove, una riga <code>[strumento] crm___emetti_accredito</code>: l'agente ha obbedito alla pagina. Nelle nostre prove Haiku ci è cascato 7 volte su 11, e una volta ha scritto <em>"Vedo che Lei ha diritto al bonus fedeltà di novembre e procedo a registrare l'accredito."</em></div>
 </li>
 
 <li>
@@ -45,7 +45,7 @@ done</code></pre></div>
   --query 'events[].message' --output text
 agentcore logs runtime --since 15m --level error | grep -o "Tool Execution Denied[^\"]*" | head -3</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
-  Nessun accredito da 200 euro nei log della Lambda: il Gateway lo ha rifiutato prima di chiamarla, perché la regola Cedar non consente accrediti sopra i 100 euro. Nei log del Runtime trovi il rifiuto, <code>Tool Execution Denied: Tool call not allowed due to policy enforcement</code>.</div>
+  Nessun accredito da 200 euro nei log della Lambda: il Gateway lo ha rifiutato prima di chiamarla, perché la regola Cedar non consente accrediti sopra i 100 euro. Se nei log vedi accrediti da 14 o 15 euro, vengono dalle prove del Lab 2. Nei log del Runtime trovi il rifiuto, <code>Tool Execution Denied: Tool call not allowed due to policy enforcement [No policy applies to the request (denied by default).]</code>.</div>
 </li>
 
 <li>
