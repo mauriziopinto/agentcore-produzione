@@ -1,0 +1,73 @@
+<!-- titolo: Lab 11 · Swarm e limiti -->
+<h1>Lab 11 · Swarm e limiti</h1>
+<p class="sottotitolo">Due agenti che si passano il caso da soli, senza un capo e senza un ordine dei passi. Quanto costano, e cosa succede quando un limite li ferma. Venti minuti.</p>
+<p class="lens">Agentic AI Lens: AGENTPERF05-BP01 (limiti di profondità e cicli), AGENTCOST01 (costo della coordinazione fra agenti).</p>
+
+<p>Prima di cominciare, se non l'hai già fatto, pubblica il codice comune dei lab da fare da soli con <code>bash ../scripts/prepara_percorso.sh</code> (vedi il Lab 5).</p>
+
+<div class="riquadro concetto"><span class="titolo">Concetto: lo swarm</span>
+<p>In uno <em>swarm</em> ogni agente decide da solo se rispondere o passare il caso a un collega, con uno strumento di passaggio di consegne. Non c'è un supervisore, e non c'è un grafo. È il pattern più flessibile e il più difficile da prevedere: niente nella struttura impedisce a due agenti di rimbalzarsi un caso. Per questo Strands ha limiti espliciti:</p>
+<table>
+  <tr><th>Limite</th><th>Nel nostro swarm</th><th>Cosa ferma</th></tr>
+  <tr><td><code>max_handoffs</code></td><td>4</td><td>i passaggi fra agenti, in tutto</td></tr>
+  <tr><td><code>max_iterations</code></td><td>6</td><td>i turni di agente, in tutto</td></tr>
+  <tr><td><code>execution_timeout</code></td><td>120 s</td><td>la durata dell'intero swarm</td></tr>
+  <tr><td><code>node_timeout</code></td><td>60 s</td><td>la durata di un turno</td></tr>
+  <tr><td><code>repetitive_handoff_detection_window</code></td><td>4</td><td>il ping-pong fra pochi agenti</td></tr>
+</table>
+</div>
+
+<ol class="passi">
+<li>
+  <p>Un caso a metà fra fatturazione e tecnico.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --modalita sciame --utente s1 --sessione caso \
+  "Sono il cliente C001. Da quando la fibra va lenta pago lo stesso canone: voglio sapere se è un guasto e se mi spetta qualcosa in fattura."</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  <pre class="uscita">[percorso] fatturazione -&gt; tecnico  [stato] Status.COMPLETED
+[token] 10046 in ingresso, 1637 in uscita</pre>
+  La fatturazione ha passato il caso al tecnico, che ha aperto un ticket. Nella nostra prova questa sola domanda ha consumato quasi 12.000 token, più del doppio dei 5.480 dell'agente singolo sulla domanda mista del Lab 4.</div>
+</li>
+
+<li>
+  <p>Ora con istruzioni scritte male di proposito: ognuno dei due deve sempre sentire l'altro prima di rispondere.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --modalita sciame --rimbalzo --utente s2 --sessione caso \
+  "Sono il cliente C001. Da quando la fibra va lenta pago lo stesso canone: voglio sapere se è un guasto e se mi spetta qualcosa in fattura."</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  Nella nostra prova un passaggio in più, <code>fatturazione -&gt; tecnico -&gt; fatturazione</code>, e circa 20.000 token. I modelli si sono fermati da soli dopo due passaggi, ma è un comportamento, non una garanzia.</div>
+</li>
+
+<li>
+  <p>Guarda cosa succede quando un limite scatta. In <code>app/agent/sciame.py</code> porta <code>max_handoffs</code> da 4 a 1, pubblica e ripeti la domanda del passo 2.</p>
+  <div class="blocco"><pre><code>sed -i 's/max_handoffs=4,/max_handoffs=1,/' app/agent/sciame.py
+agentcore deploy
+python3 ../scripts/chiedi.py --modalita sciame --rimbalzo --utente s3 --sessione caso \
+  "Sono il cliente C001. Da quando la fibra va lenta pago lo stesso canone: voglio sapere se è un guasto e se mi spetta qualcosa in fattura."</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  <pre class="uscita">Ho passato la sua richiesta al collega tecnico. Controllerà se c'è un guasto ...
+[percorso] fatturazione  [stato] Status.FAILED</pre>
+  Il limite ha fermato lo swarm, ma il cliente legge <em>"ho passato la sua richiesta al collega"</em>: una promessa che nessuno manterrà, perché il collega non è mai partito.</div>
+</li>
+
+<li>
+  <p>Rimetti il limite a 4 e pubblica.</p>
+  <div class="blocco"><pre><code>sed -i 's/max_handoffs=1,/max_handoffs=4,/' app/agent/sciame.py
+agentcore deploy</code></pre></div>
+</li>
+</ol>
+
+<div class="riquadro concetto"><span class="titolo">Il limite non basta: serve gestire il fallimento</span>
+<p>Un limite trasforma un ciclo infinito in un fallimento, e un fallimento va gestito come nel Lab 5: se lo stato non è <code>COMPLETED</code>, il codice deve rispondere con una frase fissa e, se serve, aprire un ticket. Lasciare al cliente l'ultima frase di un agente interrotto è il modo più veloce per fare una promessa sbagliata. Come esercizio, aggiungi questo controllo a <code>gestisci_caso</code> in <code>sciame.py</code>.</p>
+<p>Uno swarm ha senso quando non sai in anticipo quale agente serve e in che ordine, per esempio nella ricerca o nell'analisi aperta. Per un'assistenza clienti con domini chiari, il supervisore o l'instradamento del Lab 4 costano meno e si prevedono meglio.</p>
+</div>
+
+<div class="riquadro regola"><span class="titolo">La regola</span>Senza limiti uno swarm non va in produzione. E quando un limite scatta, la risposta al cliente la scrive il codice, non l'ultimo agente rimasto.</div>
+
+<div class="verifica-capito">
+<h2>Hai capito?</h2>
+<details><summary>Che differenza c'è fra uno swarm e il supervisore del Lab 4?</summary>
+<p>Nel supervisore un agente decide sempre e riceve sempre le risposte. Nello swarm il controllo passa di mano: chi riceve il caso decide se tenerlo o passarlo. È più flessibile e meno prevedibile, nei tempi e nei costi.</p></details>
+<details><summary>Perché i limiti sono obbligatori anche se i modelli, nelle prove, si fermano da soli?</summary>
+<p>Perché fermarsi è un comportamento del modello, che cambia con il prompt e con il modello. Il limite è codice: si comporta allo stesso modo ogni volta, anche il giorno in cui il prompt è scritto male.</p></details>
+<details><summary>Cosa ha sbagliato la risposta del passo 3?</summary>
+<p>Ha promesso un'azione mai avvenuta. Il limite ha interrotto lo swarm subito dopo il primo passaggio, e il testo restituito era il messaggio di consegna della fatturazione, non una risposta al cliente.</p></details>
+</div>

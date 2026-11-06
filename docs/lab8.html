@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 8 · Dati personali</title>
+<link rel="stylesheet" href="assets/stile.css">
+</head>
+<body>
+<header class="testata">
+  <button class="menu-bottone" type="button">Menu</button>
+  <a href="index.html"><span class="marchio">AgentCore</span> in produzione</a>
+  <span class="spazio"></span>
+  <span>TelcoCare</span>
+</header>
+<div class="contenitore">
+<nav class="indice"></nav>
+<main>
+<h1>Lab 8 · Dati personali</h1>
+<p class="sottotitolo">I numeri di telefono dei clienti finiscono nelle risposte e nei log. Li mascheri in tutti e due i posti, e decidi chi può ancora leggerli. Venticinque minuti.</p>
+<p class="lens">Agentic AI Lens: AGENTSEC08 (filtrare input e output), pilastro Security per la protezione dei dati.</p>
+
+<p>Prima di cominciare, se non l'hai già fatto, pubblica il codice comune dei lab da fare da soli con <code>bash ../scripts/prepara_percorso.sh</code> (vedi il Lab 5).</p>
+
+<div class="riquadro concetto"><span class="titolo">Concetto: due posti diversi, due strumenti diversi</span>
+<p>Un dato personale può uscire da due parti. Nella <strong>risposta</strong>, quando l'agente lo scrive al cliente: lo si maschera con un <em>guardrail</em> di Amazon Bedrock, che controlla l'output del modello. Nei <strong>log</strong>, perché l'osservabilità registra prompt, risultati degli strumenti e risposte: lo si maschera con una <em>data protection policy</em> di CloudWatch Logs.</p>
+<p>Il guardrail non protegge i log, e la policy dei log non protegge le risposte. Servono entrambi.</p>
+</div>
+
+<ol class="passi">
+<li>
+  <p>Guarda cosa contengono i log adesso. Chiedi le linee di un cliente e cerca il suo numero.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --utente p1 --sessione linee "Sono il cliente C001. Quali sono le mie linee? Dammi i numeri completi."
+sleep 30
+GRUPPO=/aws/bedrock-agentcore/runtimes/$(python3 ../scripts/id.py runtime)-DEFAULT
+aws logs filter-log-events --log-group-name $GRUPPO --start-time $(( ($(date +%s) - 300) * 1000 )) \
+  --filter-pattern '"1111111"' --query 'length(events)'</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  La risposta contiene i numeri <code>02 1234567</code> e <code>333 1111111</code>, e il log del Runtime contiene il numero mobile in diversi eventi: nella nostra prova 7. Chiunque possa leggere quel gruppo di log legge i dati dei clienti.</div>
+</li>
+
+<li>
+  <p>Crea il guardrail. Maschera email e numeri di telefono riconosciuti dal servizio, e i cellulari italiani con un'espressione regolare. I filtri per i dati personali di Bedrock Guardrails supportano l'italiano.</p>
+  <div class="blocco"><pre><code>bash ../scripts/crea_guardrail.sh
+cat guardrail.json</code></pre></div>
+  <p>Lo script scrive l'ID del guardrail in <code>guardrail.json</code>. Il codice comune dei lab lo legge già: se il file esiste, lo stack CDK passa l'ID al Runtime e gli dà il permesso di usare il guardrail.</p>
+  <div class="blocco"><span class="etichetta">app/agent/model/load.py (estratto)</span><pre><code>return BedrockModel(
+    model_id="global.anthropic.claude-sonnet-5-5",
+    guardrail_id=guardrail,
+    guardrail_version=os.getenv("GUARDRAIL_VERSIONE", "1"),
+    guardrail_latest_message=True,             # controlla solo l'ultimo messaggio
+    guardrail_stream_processing_mode="sync",   # nessun pezzo di testo esce prima del controllo
+)</code></pre></div>
+</li>
+
+<li>
+  <p>Pubblica e ripeti la domanda.</p>
+  <div class="blocco"><pre><code>agentcore deploy
+python3 ../scripts/chiedi.py --utente p2 --sessione linee "Sono il cliente C001. Quali sono le mie linee? Dammi i numeri completi."</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  <pre class="uscita">Buongiorno Mario, ecco le sue linee:
+
+- Fibra: {PHONE}
+- Mobile: {cellulare}</pre>
+  <code>{PHONE}</code> è un numero riconosciuto dal servizio, <code>{cellulare}</code> è il nome della nostra espressione regolare.</div>
+</li>
+
+<li>
+  <p>Proteggi i log del Runtime: maschera email e numeri di telefono, e tieni i log 30 giorni invece di sempre.</p>
+  <div class="blocco"><pre><code>bash ../scripts/proteggi_log.sh</code></pre></div>
+  <p>La maschera vale per i log scritti da quel momento in poi. Fai una nuova domanda e guarda i log con e senza il permesso di vedere in chiaro.</p>
+  <div class="blocco"><pre><code>T0=$(date +%s)
+python3 ../scripts/chiedi.py --utente p3 --sessione linee "Sono il cliente C002, Giulia Bianchi. Quali sono le mie linee?" &gt; /dev/null
+sleep 45
+aws logs filter-log-events --log-group-name $GRUPPO --start-time $(( T0 * 1000 )) \
+  --query 'events[].message' --output text | grep -oE 'mobile \*+' | head -2
+aws logs filter-log-events --log-group-name $GRUPPO --start-time $(( T0 * 1000 )) --unmask \
+  --query 'events[].message' --output text | grep -oE 'mobile 347 [0-9]+' | head -2</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  Senza <code>--unmask</code>, <code>mobile ***********</code>. Con <code>--unmask</code>, il numero in chiaro. Vedere in chiaro richiede il permesso IAM <code>logs:Unmask</code>: è quel permesso, e non l'accesso ai log, che decide chi legge i dati dei clienti. Tu lo hai perché il tuo ruolo è amministratore.</div>
+</li>
+</ol>
+
+<div class="riquadro attenzione"><span class="titolo">Una trappola che abbiamo trovato</span>
+<p>La prima versione dell'espressione regolare accettava numeri senza spazio. Nei log ha mascherato anche le durate degli span, che sono numeri di nove cifre: <code>"durationNano":*********</code>. Un'espressione troppo larga rende i log inutili per il debug. La versione dello script vuole lo spazio fra prefisso e numero, come nei dati del CRM. Con dati veri l'espressione va provata sui log veri prima di applicarla.</p>
+</div>
+
+<div class="riquadro concetto"><span class="titolo">Cosa resta fuori</span>
+<p>La Memory conserva i fatti estratti dalle conversazioni, compresi i dati personali, finché non scadono (nel progetto, 30 giorni per gli eventi). Le trace in <code>aws/spans</code>, nelle nostre prove, non contenevano il numero. Prima di andare in produzione va fatto lo stesso controllo su ogni posto in cui l'agente scrive: log, trace, Memory, valutazioni.</p>
+</div>
+
+<div class="riquadro regola"><span class="titolo">La regola</span>L'osservabilità non deve diventare una copia dei dati dei clienti. Si maschera nelle risposte e nei log, si limita la conservazione, e si decide chi può vedere in chiaro.</div>
+
+<div class="verifica-capito">
+<h2>Hai capito?</h2>
+<details><summary>Perché il guardrail da solo non basta?</summary>
+<p>Perché controlla l'output del modello, non quello che il Runtime scrive nei log. I risultati degli strumenti, con i numeri in chiaro, finiscono nei log prima e indipendentemente dalla risposta.</p></details>
+<details><summary>Chi può leggere i dati in chiaro dopo il passo 4?</summary>
+<p>Solo chi ha il permesso <code>logs:Unmask</code> sul gruppo di log. Chi ha solo la lettura dei log vede gli asterischi. È un permesso da dare a pochi, e da tracciare.</p></details>
+<details><summary>Perché <code>guardrail_latest_message=True</code>?</summary>
+<p>Senza, il guardrail controlla l'intera conversazione a ogni turno: costa di più, perché il guardrail si paga a caratteri controllati, e ricontrolla testo già controllato.</p></details>
+</div>
+</main>
+</div>
+<script src="assets/sito.js"></script>
+</body>
+</html>

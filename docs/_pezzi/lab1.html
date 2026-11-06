@@ -1,0 +1,86 @@
+<!-- titolo: Lab 1 · Prove prima del rilascio -->
+<h1>Lab 1 · Prove prima del rilascio</h1>
+<p class="sottotitolo">Una serie di conversazioni con il risultato atteso, rigiocata sull'agente e giudicata in automatico. Trenta minuti.</p>
+<p class="lens">Agentic AI Lens: AGENTOPS06, testing ed evaluation con LLM-as-judge.</p>
+
+<p>Un agente cambia spesso: il prompt, il modello, uno strumento. Ogni cambio può rompere qualcosa che prima funzionava, e con un modello non lo scopri leggendo il codice. Serve la stessa cosa che si usa per il software: una serie di prove che si rigioca a ogni modifica, e un cancello che non lascia passare una versione che peggiora.</p>
+
+<div class="riquadro concetto"><span class="titolo">Concetto: simulate e i valutatori già pronti</span>
+<p><code>agentcore eval ondemand simulate</code> legge un file di prove, manda ogni conversazione all'agente pubblicato, aspetta che le trace siano pronte e le fa valutare. Usiamo due valutatori già pronti:</p>
+<ul>
+  <li><code>Builtin.GoalSuccessRate</code>: un modello giudice controlla se la conversazione rispetta le <em>assertions</em>, cioè frasi che descrivono cosa deve succedere.</li>
+  <li><code>Builtin.TrajectoryAnyOrderMatch</code>: controlla che l'agente abbia chiamato gli strumenti attesi, in qualunque ordine. Questo non è un giudizio: è un confronto fra elenchi.</li>
+</ul>
+</div>
+
+<ol class="passi">
+<li>
+  <p>Guarda le prove. Sono otto, una per riga.</p>
+  <div class="blocco"><pre><code>head -2 ../risorse/lab1/prove.jsonl</code></pre></div>
+  <div class="blocco"><span class="etichetta">una riga del file, a capo per leggibilità</span><pre><code>{"example_id": "fattura-doppia",
+ "turns": [{"input": "Sono Giulia Bianchi, codice cliente C002. La fattura di ottobre mi sembra alta, potete controllare?"}],
+ "assertions": ["L'assistente spiega che il canone di ottobre è stato addebitato due volte",
+                "L'assistente usa gli importi del CRM: 29,98 euro a ottobre e 14,99 euro a settembre"],
+ "expected_trajectory": ["crm___get_fatture"]}</code></pre></div>
+  <p>Le altre prove coprono una fattura scaduta, l'offerta attiva, il calcolo di una rata, un cliente che non esiste, una richiesta senza codice cliente, un accredito motivato e una richiesta fuori ambito.</p>
+</li>
+
+<li>
+  <p>Rigioca le prove sulla versione pubblicata. Ci vogliono circa 4 minuti: uno per le conversazioni, tre di attesa perché le trace siano consultabili.</p>
+  <div class="blocco"><pre><code>bash ../scripts/prove.sh</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  <pre class="uscita">prova                 GoalSuccessRate           TrajectoryAnyOrderMatch
+accredito-motivato    ok                        ok
+cliente-inesistente   ok                        -
+fattura-doppia        ok                        ok
+fattura-scaduta       ok                        ok
+fuori-ambito          NO                        -
+    GoalSuccessRate: ... the assistant actually wrote a 10-verse poem about Serie A ...
+manca-codice          ok                        -
+offerta-attiva        ok                        ok
+rata-smartphone       ok                        ok
+
+Prove superate: 7 su 8 (88%), soglia 100%
+CANCELLO CHIUSO: questa versione non va rilasciata.</pre>
+  Il trattino vuol dire che quella prova non ha un elenco di strumenti attesi. Nelle nostre prove la richiesta fuori ambito è fallita: l'agente ha scritto la poesia sulla Serie A.</div>
+</li>
+
+<li>
+  <p>Correggi il prompt: l'agente deve rispondere solo sui servizi TelcoCare.</p>
+  <div class="blocco"><pre><code>cp ../risorse/lab1/main.py app/agent/main.py
+agentcore deploy</code></pre></div>
+  <div class="blocco"><span class="etichetta">app/agent/main.py, la riga aggiunta al prompt</span><pre><code>Rispondi solo a domande sui servizi TelcoCare. Per qualunque altra richiesta, spiega con gentilezza
+che puoi aiutare solo con linee, offerte, fatture e assistenza TelcoCare.</code></pre></div>
+  <p>Il deploy dura circa 2 minuti e mezzo e crea una nuova versione del Runtime.</p>
+</li>
+
+<li>
+  <p>Rigioca le stesse prove.</p>
+  <div class="blocco"><pre><code>bash ../scripts/prove.sh</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  <pre class="uscita">Prove superate: 8 su 8 (100%), soglia 100%
+CANCELLO APERTO: la versione si può rilasciare.</pre>
+  Se una prova fallisce ancora, leggi la spiegazione del giudice: è scritta per essere capita da una persona.</div>
+</li>
+</ol>
+
+<div class="riquadro attenzione"><span class="titolo">Una trappola che abbiamo trovato</span>
+<p>Se rigiochi le prove sempre con lo stesso <code>actorId</code>, la Memory si ricorda le conversazioni dei giri precedenti e l'agente risponde a memoria, senza chiamare gli strumenti. Le prove non partono più pulite e falliscono per il motivo sbagliato. Per questo <code>prove.sh</code> usa un utente nuovo a ogni giro, come <code>collaudo-1793965534</code>.</p>
+</div>
+
+<div class="riquadro concetto"><span class="titolo">Dalle prove alla pipeline</span>
+<p><code>riepilogo_prove.py</code> esce con codice 1 quando il cancello è chiuso. In una pipeline di rilascio basta questo per fermare il deploy in produzione. La soglia la decidete voi: 100% per le prove che toccano soldi e dati, meno per quelle di stile.</p>
+<p>Le prove crescono con il servizio: ogni volta che un cliente segnala un errore, quella conversazione diventa una prova nuova.</p>
+</div>
+
+<div class="riquadro regola"><span class="titolo">La regola</span>Non si rilascia senza prove automatiche. Ogni modifica a prompt, modello o strumenti rigioca la stessa serie di prove, e un cancello decide.</div>
+
+<div class="verifica-capito">
+<h2>Hai capito?</h2>
+<details><summary>Perché non basta provare a mano due o tre domande dopo ogni modifica?</summary>
+<p>Perché il modello non è deterministico e una modifica può rompere un caso che non stai guardando. Nel lab la correzione riguardava le richieste fuori ambito: solo rigiocando tutte le prove sai che non ha peggiorato le altre sette.</p></details>
+<details><summary>Che differenza c'è fra i due valutatori?</summary>
+<p><code>GoalSuccessRate</code> è un giudizio di un modello sulle frasi che hai scritto, quindi può sbagliare e va letto con la sua spiegazione. <code>TrajectoryAnyOrderMatch</code> confronta gli strumenti chiamati con quelli attesi: è un controllo esatto, e cattura per esempio un accredito fatto senza leggere la fattura.</p></details>
+<details><summary>Perché ogni giro di prove usa un utente diverso?</summary>
+<p>Perché la Memory è legata all'utente. Con lo stesso utente l'agente ricorda i giri precedenti e le prove non misurano più il comportamento di una conversazione nuova.</p></details>
+</div>

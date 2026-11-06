@@ -1,0 +1,9 @@
+# Il progetto creato da ogni partecipante nel Lab 0
+TelcoCare/
+# Identificativi e password degli utenti di prova del Lab 7
+.cognito.env
+
+__pycache__/
+*.pyc
+.DS_Store
+risultati-*.json

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 4 · Più agenti solo se serve</title>
+<link rel="stylesheet" href="assets/stile.css">
+</head>
+<body>
+<header class="testata">
+  <button class="menu-bottone" type="button">Menu</button>
+  <a href="index.html"><span class="marchio">AgentCore</span> in produzione</a>
+  <span class="spazio"></span>
+  <span>TelcoCare</span>
+</header>
+<div class="contenitore">
+<nav class="indice"></nav>
+<main>
+<h1>Lab 4 · Più agenti solo se serve</h1>
+<p class="sottotitolo">La stessa domanda a un agente solo, a un supervisore con due specialisti e a una regola che instrada. Poi i numeri. Venticinque minuti.</p>
+<p class="lens">Agentic AI Lens: AGENTPERF05 (pattern di orchestrazione), AGENTCOST01-BP03 (hybrid supervisor), AGENTCOST05 (costi attribuiti a ogni agente).</p>
+
+<div class="riquadro concetto"><span class="titolo">Concetto: due pattern</span>
+<p><strong>Supervisore con specialisti</strong> (in Strands, <em>agents as tools</em>). Un agente principale non tocca il CRM: delega a uno specialista fatturazione e a uno specialista tecnico, che usa come strumenti. Ogni specialista ha il suo contesto e i suoi strumenti.</p>
+<p><strong>Instradamento deterministico</strong>. La lens lo chiama <em>hybrid supervisor</em>: una regola, qui alcune parole chiave, sceglie lo specialista senza chiamare il modello. Solo le richieste che la regola non sa classificare salgono al supervisore.</p>
+</div>
+
+<div class="blocco"><span class="etichetta">app/agent/squadra.py (estratto)</span><pre><code>PAROLE_FATTURE = re.compile(r"fattur|accredit|addebit|pagament|sollecit|bollett|rimbors", re.I)
+PAROLE_TECNICO = re.compile(r"guast|lent|connession|non funziona|non va|modem|linea|ticket", re.I)
+
+async def instradato(domanda):
+    fatture, tecnico = bool(PAROLE_FATTURE.search(domanda)), bool(PAROLE_TECNICO.search(domanda))
+    if fatture and not tecnico:
+        return await _fatturazione().invoke_async(domanda)      # nessun supervisore
+    if tecnico and not fatture:
+        return await _tecnico().invoke_async(domanda)           # nessun supervisore
+    return await supervisore(domanda)                           # la regola non basta</code></pre></div>
+<p>Ogni specialista vede solo i suoi strumenti del Gateway: il tecnico non può emettere accrediti, perché il suo client MCP non li elenca. Ogni agente ha un nome, e il codice somma i token per nome: è l'attribuzione dei costi a ogni agente.</p>
+
+<ol class="passi">
+<li>
+  <p>Pubblica la versione con i tre modi.</p>
+  <div class="blocco"><pre><code>cp ../risorse/lab4/main.py ../risorse/lab4/squadra.py ../risorse/lab4/gateway_client.py app/agent/
+agentcore deploy</code></pre></div>
+</li>
+
+<li>
+  <p>Guarda un caso da vicino: il supervisore su una domanda che tocca fatture e guasti.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --modalita supervisore --utente c3 --sessione entrambi \
+  "Sono il cliente C003. Ho una fattura scaduta e in più la linea non va da stamattina: cosa devo fare?"</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  La risposta, poi il conto, con una riga per ogni agente:
+  <pre class="uscita">[costo] supervisore (supervisore): ... token in ingresso, ... in uscita, 7 chiamate al modello, 15.0 s
+        fatturazione: ... in, ... out, 2 chiamate
+        tecnico: ... in, ... out, 3 chiamate
+        supervisore: ... in, ... out, 2 chiamate</pre></div>
+</li>
+
+<li>
+  <p>Confronta i tre modi su tre domande: una di fatturazione, una tecnica, una che le tocca entrambe. Circa 3 minuti.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/confronta.py</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  Nella nostra prova, con Claude Sonnet 5.5 per tutti gli agenti e la Memory spenta:
+  <pre class="uscita">domanda   modalità     percorso                           token  chiamate  secondi
+fattura   singolo      singolo                             3115         2      5.2
+fattura   supervisore  supervisore                         5201         4     10.7
+fattura   instradato   regola -&gt; fatturazione              2707         2      4.4
+
+guasto    singolo      singolo                             2634         2      4.9
+guasto    supervisore  supervisore                         5770         5     15.0
+guasto    instradato   regola -&gt; tecnico                   3733         3      9.1
+
+entrambi  singolo      singolo                             5480         3      9.3
+entrambi  supervisore  supervisore                         9743         7     15.0
+entrambi  instradato   regola incerta -&gt; supervisore       9299         7     12.1
+
+Totale sulle tre domande:
+  singolo        11229 token (100% del singolo), 7 chiamate al modello, 19 s
+  supervisore    20714 token (184% del singolo), 16 chiamate al modello, 41 s
+  instradato     15739 token (140% del singolo), 12 chiamate al modello, 26 s</pre></div>
+</li>
+</ol>
+
+<div class="riquadro concetto"><span class="titolo">Come leggere i numeri</span>
+<p>Con quattro strumenti e tre domande l'agente unico vince: costa meno ed è più veloce. Il supervisore quasi raddoppia token e tempi, perché ogni domanda passa da due modelli. L'instradamento recupera buona parte del costo sulle domande chiare, e sulle domande miste costa come il supervisore.</p>
+<p>Più agenti convengono quando ci sono motivi che questi numeri non mostrano: tanti strumenti diversi che confondono un agente solo, contesti molto lunghi che lo specialista può riassumere, permessi diversi per ogni mestiere, team diversi che sviluppano e pubblicano i propri agenti. Il Lab 9 riprende l'ultimo punto.</p>
+</div>
+
+<div class="riquadro attenzione"><span class="titolo">Il limite di questo esempio</span>
+<p>Qui i permessi degli specialisti sono separati solo nel codice: tutti gli agenti girano nello stesso Runtime, con lo stesso ruolo IAM. Un errore nel codice potrebbe dare al tecnico lo strumento degli accrediti. La separazione vera richiede Runtime e ruoli separati: è il Lab 9.</p>
+</div>
+
+<div class="riquadro regola"><span class="titolo">La regola</span>Ogni agente in più si giustifica con un numero. Si parte da un agente solo, si misura, e si aggiunge un agente quando si sa cosa si guadagna.</div>
+
+<div class="verifica-capito">
+<h2>Hai capito?</h2>
+<details><summary>Perché il supervisore costa quasi il doppio dell'agente singolo?</summary>
+<p>Perché ogni richiesta passa almeno da due modelli: il supervisore legge la domanda e decide, lo specialista lavora, e poi il supervisore rilegge il risultato e scrive la risposta. Ogni passaggio rilegge anche il proprio contesto.</p></details>
+<details><summary>Cosa guadagni con l'instradamento deterministico?</summary>
+<p>Sulle domande che una regola sa classificare salti il supervisore: meno token e meno tempo. Sulle domande che la regola non sa classificare paghi come prima. Conviene quando la maggior parte del traffico è chiara.</p></details>
+<details><summary>Perché è importante sommare i token per agente?</summary>
+<p>Perché il costo totale non dice dove intervenire. Con il conto per agente vedi, per esempio, che il supervisore costa più degli specialisti, e puoi decidere di sostituirlo con una regola o con un modello più piccolo.</p></details>
+</div>
+</main>
+</div>
+<script src="assets/sito.js"></script>
+</body>
+</html>

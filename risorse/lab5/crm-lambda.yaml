@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Workshop AgentCore in produzione - Lab 5. Il CRM simulato di TelcoCare, con gli accrediti
+  salvati in DynamoDB, un ritardo regolabile per simulare un guasto e l'idempotenza attivabile.
+  Non ha URL pubblici: la chiama solo il Gateway di AgentCore con il suo ruolo IAM.
+
+Parameters:
+  RitardoSecondi:
+    Type: Number
+    Default: 0
+    Description: Secondi di attesa dopo aver registrato un accredito (oltre 10 la Lambda va in timeout)
+  Idempotenza:
+    Type: String
+    Default: "no"
+    AllowedValues: ["si", "no"]
+    Description: Se "si", un accredito identico nello stesso giorno non viene registrato due volte
+
+Resources:
+  Accrediti:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: telcocare-accrediti
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+
+  CrmRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: scrivi-accrediti
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:PutItem
+                Resource: !GetAtt Accrediti.Arn
+
+  CrmFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: telcocare-crm
+      Description: CRM simulato di TelcoCare (workshop AgentCore in produzione)
+      Runtime: python3.13
+      Architectures: [arm64]
+      Handler: index.handler
+      Timeout: 10
+      MemorySize: 256
+      Role: !GetAtt CrmRole.Arn
+      Environment:
+        Variables:
+          TABELLA: !Ref Accrediti
+          RITARDO_SECONDI: !Ref RitardoSecondi
+          IDEMPOTENZA: !Ref Idempotenza
+      Code:
+        ZipFile: |
+          import datetime
+          import hashlib
+          import json
+          import os
+          import time
+          import uuid
+
+          import boto3
+
+          TABELLA = boto3.resource("dynamodb").Table(os.environ["TABELLA"])
+
+          CLIENTI = {
+              "C001": {"nome": "Mario Rossi", "offerta": "Casa Fibra 2.5 Gbps + Mobile 150 GB",
+                       "linee": ["fibra 02 1234567", "mobile 333 1111111"], "metodo_pagamento": "addebito su conto"},
+              "C002": {"nome": "Giulia Bianchi", "offerta": "Mobile 300 GB 5G",
+                       "linee": ["mobile 347 2222222", "mobile 347 2222223"], "metodo_pagamento": "carta di credito"},
+              "C003": {"nome": "Luca Verdi", "offerta": "Casa Fibra 1 Gbps",
+                       "linee": ["fibra 06 7654321"], "metodo_pagamento": "bollettino"},
+          }
+
+          FATTURE = {
+              "C001": [
+                  {"numero": "F2026-0912", "mese": "settembre 2026", "importo_euro": 39.95, "stato": "pagata"},
+                  {"numero": "F2026-1012", "mese": "ottobre 2026", "importo_euro": 39.95, "stato": "pagata"},
+              ],
+              "C002": [
+                  {"numero": "F2026-0921", "mese": "settembre 2026", "importo_euro": 14.99, "stato": "pagata"},
+                  {"numero": "F2026-1021", "mese": "ottobre 2026", "importo_euro": 29.98, "stato": "da pagare",
+                   "nota": "addebitato due volte il canone di ottobre"},
+              ],
+              "C003": [
+                  {"numero": "F2026-1033", "mese": "ottobre 2026", "importo_euro": 27.95, "stato": "scaduta"},
+              ],
+          }
+
+
+          def _risposta(dati):
+              return json.dumps(dati, ensure_ascii=False)
+
+
+          def _registra_accredito(id_cliente, importo, motivo):
+              oggi = datetime.date.today().isoformat()
+              if os.environ.get("IDEMPOTENZA") == "si":
+                  # Stessa richiesta nello stesso giorno = stessa chiave: la seconda scrittura fallisce.
+                  base = f"{id_cliente}|{importo}|{oggi}"
+                  chiave = hashlib.sha256(base.encode()).hexdigest()[:16]
+                  try:
+                      TABELLA.put_item(
+                          Item={"id": chiave, "id_cliente": id_cliente, "importo_euro": importo,
+                                "motivo": motivo, "giorno": oggi},
+                          ConditionExpression="attribute_not_exists(id)",
+                      )
+                  except TABELLA.meta.client.exceptions.ConditionalCheckFailedException:
+                      return {"esito": "accredito registrato: era già stato salvato da una richiesta identica precedente, non lo ripeto", "id_accredito": chiave}
+              else:
+                  chiave = uuid.uuid4().hex[:16]
+                  TABELLA.put_item(Item={"id": chiave, "id_cliente": id_cliente, "importo_euro": importo,
+                                         "motivo": motivo, "giorno": oggi})
+              # Il guasto simulato arriva dopo la scrittura: l'accredito è già salvato,
+              # ma chi ha chiamato riceve un errore e non lo sa.
+              time.sleep(float(os.environ.get("RITARDO_SECONDI", "0")))
+              return {"esito": "accredito registrato", "id_accredito": chiave, "nella_fattura_di": "novembre 2026"}
+
+
+          def handler(event, context):
+              nome = context.client_context.custom["bedrockAgentCoreToolName"]
+              strumento = nome.split("___", 1)[-1]
+              print(json.dumps({"strumento": strumento, "argomenti": event}, ensure_ascii=False))
+
+              id_cliente = str(event.get("id_cliente", "")).upper()
+              if id_cliente not in CLIENTI:
+                  return _risposta({"errore": f"cliente {id_cliente} non trovato"})
+              if strumento == "get_cliente":
+                  return _risposta({"id_cliente": id_cliente, **CLIENTI[id_cliente]})
+              if strumento == "get_fatture":
+                  return _risposta({"id_cliente": id_cliente, "fatture": FATTURE[id_cliente]})
+              if strumento == "apri_ticket":
+                  return _risposta({"ticket": "TK-" + uuid.uuid4().hex[:6].upper(), "stato": "aperto",
+                                    "descrizione": event.get("descrizione", "")})
+              if strumento == "emetti_accredito":
+                  esito = _registra_accredito(id_cliente, int(event.get("importo_euro", 0)), event.get("motivo", ""))
+                  return _risposta({"id_cliente": id_cliente, **esito})
+              return _risposta({"errore": f"strumento {strumento} sconosciuto"})
+
+Outputs:
+  CrmFunctionArn:
+    Description: ARN della Lambda, da usare come target del Gateway
+    Value: !GetAtt CrmFunction.Arn
+  TabellaAccrediti:
+    Value: !Ref Accrediti

@@ -1,0 +1,69 @@
+<!-- titolo: Lab 10 · Allarmi e monitoraggio -->
+<h1>Lab 10 · Allarmi e monitoraggio</h1>
+<p class="sottotitolo">Allarmi su errori e latenza, una valutazione continua della qualità e il costo per conversazione. Venti minuti.</p>
+<p class="lens">Agentic AI Lens: AGENTOPS05 (tracing, anomalie, dashboard), AGENTCOST01 (costo del ciclo di ragionamento).</p>
+
+<p>Prima di cominciare, se non l'hai già fatto, pubblica il codice comune dei lab da fare da soli con <code>bash ../scripts/prepara_percorso.sh</code> (vedi il Lab 5).</p>
+
+<div class="riquadro concetto"><span class="titolo">Concetto: tre cose da guardare</span>
+<p>Un agente in produzione si guasta come un servizio (errori, lentezza), ma può anche peggiorare senza errori: risposte meno utili, più token per lo stesso lavoro. Servono tre controlli:</p>
+<ul>
+  <li><strong>Allarmi tecnici</strong> sulle metriche del Runtime, nel namespace CloudWatch <code>AWS/Bedrock-AgentCore</code>: <code>SystemErrors</code>, <code>Throttles</code>, <code>Latency</code>.</li>
+  <li><strong>Qualità</strong> con una valutazione online, che giudica una parte delle conversazioni vere, come nel primo workshop.</li>
+  <li><strong>Costo</strong> per conversazione, dai token che l'agente consuma.</li>
+</ul>
+</div>
+
+<ol class="passi">
+<li>
+  <p>Crea due allarmi sull'endpoint <code>DEFAULT</code>. Per vederne uno scattare subito, metti la soglia di latenza molto bassa: 5 secondi.</p>
+  <div class="blocco"><pre><code>bash ../scripts/crea_allarmi.sh DEFAULT 5000</code></pre></div>
+</li>
+
+<li>
+  <p>Fai una richiesta che richiede più strumenti, poi controlla lo stato dell'allarme ogni minuto.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --utente m10 --sessione lento "Sono il cliente C003. Controlla linee e fatture e dimmi tutto quello che risulta." &gt; /dev/null
+for i in 1 2 3 4 5; do
+  sleep 60
+  aws cloudwatch describe-alarms --alarm-names telcocare-DEFAULT-latenza --query 'MetricAlarms[0].StateValue' --output text
+done</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  Da <code>INSUFFICIENT_DATA</code> a <code>ALARM</code>. Nella nostra prova l'allarme è scattato al secondo controllo: la richiesta aveva una latenza p90 di circa 7,7 secondi.</div>
+</li>
+
+<li>
+  <p>Rimetti la soglia di latenza a un valore realistico, 30 secondi.</p>
+  <div class="blocco"><pre><code>bash ../scripts/crea_allarmi.sh DEFAULT 30000</code></pre></div>
+  <p>Gli allarmi di questo lab non mandano notifiche. In produzione si collegano a un topic Amazon SNS con <code>--alarm-actions</code>, che avvisa chi è di turno.</p>
+</li>
+
+<li>
+  <p>Aggiungi una valutazione online della qualità, sul 100% delle sessioni, e pubblica.</p>
+  <div class="blocco"><pre><code>agentcore add online-eval --name MonitorQualita --agent agent \
+  --evaluators Builtin.Helpfulness --sampling-rate 100
+agentcore deploy</code></pre></div>
+  <p>In produzione il campione si abbassa, per esempio al 10%: ogni valutazione costa le chiamate al modello giudice. I risultati finiscono in CloudWatch e si vedono nella console, in <em>GenAI Observability</em>, <em>Bedrock AgentCore</em>.</p>
+</li>
+
+<li>
+  <p>Guarda il costo di una conversazione in token. Le trace contengono i token di ogni chiamata al modello.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --modalita singolo --utente m10 --sessione costo "Sono il cliente C002. La fattura di ottobre è giusta?"</code></pre></div>
+  <p>Moltiplica i token in ingresso e in uscita per i prezzi del modello nella <a href="https://aws.amazon.com/bedrock/pricing/">pagina dei prezzi di Amazon Bedrock</a> e hai il costo della conversazione. Con il conto per agente del Lab 4 sai anche dove si spende.</p>
+</li>
+</ol>
+
+<div class="riquadro concetto"><span class="titolo">Un allarme sul costo</span>
+<p>Un buon allarme in più, che qui non costruiamo, è sul numero medio di token per conversazione. Se sale senza che cambi il traffico, l'agente sta facendo più giri del solito: un prompt peggiorato, uno strumento che risponde male, un ciclo. È spesso il primo segnale di un problema di qualità.</p>
+</div>
+
+<div class="riquadro regola"><span class="titolo">La regola</span>Un agente in produzione ha allarmi come qualunque servizio, più una misura continua della qualità e del costo per conversazione.</div>
+
+<div class="verifica-capito">
+<h2>Hai capito?</h2>
+<details><summary>Perché non basta un allarme sugli errori?</summary>
+<p>Perché un agente può peggiorare senza un solo errore: risposte sbagliate ma ben formate, più giri del necessario. Per questo servono anche la valutazione online e il controllo dei token.</p></details>
+<details><summary>Perché si allarma su <code>SystemErrors</code> e non su <code>UserErrors</code>?</summary>
+<p><code>SystemErrors</code> conta gli errori del servizio, mentre <code>UserErrors</code> di solito indica richieste sbagliate di chi chiama. La guida di AgentCore sul disaster recovery dà la stessa indicazione.</p></details>
+<details><summary>Perché in produzione la valutazione online non va al 100%?</summary>
+<p>Perché ogni sessione valutata costa le chiamate al modello giudice. Un campione è sufficiente per vedere una tendenza; il 100% serve in un lab o per un periodo breve dopo un rilascio importante.</p></details>
+</div>

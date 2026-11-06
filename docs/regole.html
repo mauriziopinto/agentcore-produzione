@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le regole in una pagina</title>
+<link rel="stylesheet" href="assets/stile.css">
+</head>
+<body>
+<header class="testata">
+  <button class="menu-bottone" type="button">Menu</button>
+  <a href="index.html"><span class="marchio">AgentCore</span> in produzione</a>
+  <span class="spazio"></span>
+  <span>TelcoCare</span>
+</header>
+<div class="contenitore">
+<nav class="indice"></nav>
+<main>
+<h1>Le regole in una pagina</h1>
+<p class="sottotitolo">Quello che resta del workshop, da tenere accanto quando si porta un agente in produzione.</p>
+
+<table>
+  <tr><th>Regola</th><th>Come l'abbiamo applicata</th><th>Lab</th></tr>
+  <tr><td>Non si rilascia senza prove automatiche</td><td>Otto conversazioni con il risultato atteso, rigiocate a ogni modifica, e un cancello che chiude sotto il 100%</td><td><a href="lab1.html">1</a></td></tr>
+  <tr><td>Ogni rilascio si annulla in un minuto</td><td>I clienti chiamano l'endpoint <code>produzione</code>, fermo su una versione; promozione e ritorno indietro in circa 70 secondi</td><td><a href="lab2.html">2</a></td></tr>
+  <tr><td>Le azioni irreversibili non dipendono dal giudizio del modello</td><td>Tetto Cedar a 100 euro nel Gateway, approvazione umana fra 20 e 100 euro</td><td><a href="lab3.html">3</a></td></tr>
+  <tr><td>Ogni agente in più si giustifica con un numero</td><td>Agente singolo, supervisore e instradamento confrontati su token, chiamate e tempi</td><td><a href="lab4.html">4</a></td></tr>
+  <tr><td>Ogni strumento che scrive deve reggere un retry</td><td>Chiave di idempotenza nel CRM, limiti di turni e token per richiesta</td><td><a href="lab5.html">5</a></td></tr>
+  <tr><td>Se i passi sono noti, li scrive il codice e non il modello</td><td>Il reclamo come grafo, con un controllore e un numero massimo di passi</td><td><a href="lab6.html">6</a></td></tr>
+  <tr><td>Chi è l'utente lo dice un token, non il prompt</td><td>Runtime per i clienti con Cognito, codice cliente imposto dal codice</td><td><a href="lab7.html">7</a></td></tr>
+  <tr><td>L'osservabilità non deve diventare una copia dei dati dei clienti</td><td>Guardrail sulle risposte, maschera e conservazione sui log, permesso <code>logs:Unmask</code> a pochi</td><td><a href="lab8.html">8</a></td></tr>
+  <tr><td>Fra agenti vale il minimo privilegio, come fra servizi</td><td>Specialista su un Runtime suo, con il suo ruolo, chiamato via A2A con un permesso preciso</td><td><a href="lab9.html">9</a></td></tr>
+  <tr><td>Un agente in produzione ha allarmi come qualunque servizio</td><td>Allarmi su errori e latenza, valutazione online, costo per conversazione</td><td><a href="lab10.html">10</a></td></tr>
+  <tr><td>Senza limiti uno swarm non va in produzione</td><td>Limiti di passaggi, turni e tempo; risposta fissa quando un limite scatta</td><td><a href="lab11.html">11</a></td></tr>
+</table>
+
+<h2>Il filo che le lega</h2>
+<p>Il modello è la parte più utile e la meno prevedibile di un agente. Tutte le regole spostano le garanzie fuori dal modello, in codice e infrastruttura che si comportano allo stesso modo ogni volta: prove, endpoint, regole Cedar, hook, chiavi di idempotenza, grafi, token, maschere, ruoli IAM, allarmi, limiti. Il modello resta libero di ragionare dentro questi confini.</p>
+
+<h2>Per approfondire</h2>
+<ul>
+  <li><a href="https://docs.aws.amazon.com/wellarchitected/latest/agentic-ai-lens/agentic-ai-lens.html">Agentic AI Lens del Well-Architected Framework</a>, con il percorso di lettura "Moving to production" e "Scaling to multi-agent systems"</li>
+  <li><a href="https://docs.aws.amazon.com/prescriptive-guidance/latest/agentic-ai-patterns/introduction.html">Agentic AI patterns and workflows on AWS</a>, Prescriptive Guidance</li>
+  <li><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-cli-get-started.html">Tutorial ufficiale: Build, deploy, and operate an agent</a></li>
+  <li><a href="https://strandsagents.com/docs/user-guide/sdk/multi-agent/multi-agent-patterns/index.md">Strands Agents: pattern multi-agente</a> e <a href="https://strandsagents.com/docs/user-guide/sdk/interrupts/index.md">interrupt per l'approvazione umana</a></li>
+</ul>
+</main>
+</div>
+<script src="assets/sito.js"></script>
+</body>
+</html>

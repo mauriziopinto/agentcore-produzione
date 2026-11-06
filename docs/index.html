@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentCore in produzione</title>
+<link rel="stylesheet" href="assets/stile.css">
+</head>
+<body>
+<header class="testata">
+  <button class="menu-bottone" type="button">Menu</button>
+  <a href="index.html"><span class="marchio">AgentCore</span> in produzione</a>
+  <span class="spazio"></span>
+  <span>TelcoCare</span>
+</header>
+<div class="contenitore">
+<nav class="indice"></nav>
+<main>
+<h1>Agenti in produzione, in sicurezza</h1>
+<p class="sottotitolo">Secondo workshop su Amazon Bedrock AgentCore. Riprendiamo TelcoCare e lo prepariamo per i clienti veri: prove, rilasci, controlli, più agenti, guasti, identità, dati personali.</p>
+
+<p>Nel primo workshop TelcoCare ha imparato a rispondere. In produzione questo non basta: devi sapere quando l'agente sbaglia, limitare i danni quando succede, cambiarlo senza rompere quello che funziona e sapere quanto costa. Ogni lab rende concreto uno di questi punti e chiude con una regola da ricordare.</p>
+
+<h2>Come è organizzato</h2>
+<table>
+  <tr><th>Parte</th><th>Lab</th><th>La regola</th></tr>
+  <tr><td rowspan="1">Partenza</td><td><a href="lab0.html">Lab 0 · Ripartenza</a></td><td>Si riparte da TelcoCare com'era alla fine del primo workshop</td></tr>
+  <tr><td rowspan="4">In aula</td><td><a href="lab1.html">Lab 1 · Prove prima del rilascio</a></td><td>Non si rilascia senza prove automatiche</td></tr>
+  <tr><td><a href="lab2.html">Lab 2 · Rilascio reversibile</a></td><td>Ogni rilascio si annulla in un minuto</td></tr>
+  <tr><td><a href="lab3.html">Lab 3 · Il controllo sta fuori dal modello</a></td><td>Le azioni irreversibili non dipendono dal giudizio del modello</td></tr>
+  <tr><td><a href="lab4.html">Lab 4 · Più agenti solo se serve</a></td><td>Ogni agente in più si giustifica con un numero</td></tr>
+  <tr><td rowspan="7">Da fare da soli</td><td><a href="lab5.html">Lab 5 · Guasti e retry</a></td><td>Ogni strumento che scrive deve reggere un retry</td></tr>
+  <tr><td><a href="lab6.html">Lab 6 · Grafo e controllore</a></td><td>Se i passi sono noti, li scrive il codice e non il modello</td></tr>
+  <tr><td><a href="lab7.html">Lab 7 · L'identità dell'utente</a></td><td>Chi è l'utente lo dice un token, non il prompt</td></tr>
+  <tr><td><a href="lab8.html">Lab 8 · Dati personali</a></td><td>L'osservabilità non deve diventare una copia dei dati dei clienti</td></tr>
+  <tr><td><a href="lab9.html">Lab 9 · Agenti di team diversi</a></td><td>Fra agenti vale il minimo privilegio, come fra servizi</td></tr>
+  <tr><td><a href="lab10.html">Lab 10 · Allarmi e monitoraggio</a></td><td>Un agente in produzione ha allarmi come qualunque servizio</td></tr>
+  <tr><td><a href="lab11.html">Lab 11 · Swarm e limiti</a></td><td>Senza limiti uno swarm non va in produzione</td></tr>
+</table>
+<p>Hai accesso all'ambiente per 72 ore. I lab da 5 a 11 partono tutti da TelcoCare come lo lasci alla fine del Lab 4, e si possono fare in qualunque ordine. Alla fine trovi <a href="regole.html">le regole in una pagina</a> e la <a href="pulizia.html">pulizia</a>.</p>
+
+<h2>I pattern che vediamo</h2>
+<table>
+  <tr><th>Pattern</th><th>Cos'è</th><th>Dove</th></tr>
+  <tr><td>Supervisore con specialisti</td><td>Un agente delega a specialisti che usa come strumenti</td><td>Lab 4</td></tr>
+  <tr><td>Instradamento deterministico</td><td>Una regola sceglie lo specialista, il modello decide solo i casi dubbi</td><td>Lab 4</td></tr>
+  <tr><td>Approvazione umana</td><td>L'agente si ferma e aspetta una persona prima di un'azione rischiosa</td><td>Lab 3</td></tr>
+  <tr><td>Grafo a passi fissi</td><td>L'ordine dei passi lo decide il codice, il modello lavora dentro i passi</td><td>Lab 6</td></tr>
+  <tr><td>Controllore della risposta</td><td>Un secondo agente controlla il primo e lo rimanda indietro se sbaglia</td><td>Lab 6</td></tr>
+  <tr><td>Agenti remoti via A2A</td><td>Agenti su Runtime separati, con ruoli separati, che si parlano con un protocollo aperto</td><td>Lab 9</td></tr>
+  <tr><td>Swarm</td><td>Agenti che si passano il lavoro da soli, senza struttura</td><td>Lab 11</td></tr>
+</table>
+
+<h2>Da sapere prima di iniziare</h2>
+<ul>
+  <li>Ognuno lavora nel proprio account AWS, nella regione <code>us-east-1</code>, con lo stesso ambiente del primo workshop.</li>
+  <li>Ogni lab indica la best practice corrispondente della <a href="https://docs.aws.amazon.com/wellarchitected/latest/agentic-ai-lens/agentic-ai-lens.html">Agentic AI Lens</a> del Well-Architected Framework, per chi vuole approfondire.</li>
+  <li>I numeri riportati nei lab (tempi, token, esiti) li abbiamo misurati noi nelle prove del 6 novembre 2026. I tuoi saranno simili, non uguali: i modelli non rispondono due volte allo stesso modo.</li>
+  <li>Tutti i dati di TelcoCare sono inventati.</li>
+</ul>
+</main>
+</div>
+<script src="assets/sito.js"></script>
+</body>
+</html>

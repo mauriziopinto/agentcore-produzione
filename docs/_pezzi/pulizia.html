@@ -1,0 +1,32 @@
+<!-- titolo: Pulizia -->
+<h1>Pulizia</h1>
+<p class="sottotitolo">Cancelli tutto quello che hai creato durante il workshop, anche nei lab da fare da soli. Circa dieci minuti, quasi tutti di attesa.</p>
+
+<ol class="passi">
+<li>
+  <p>Dalla cartella del progetto lancia lo script di pulizia.</p>
+  <div class="blocco"><pre><code>cd ~/agentcore-produzione/TelcoCare
+bash ../scripts/pulizia.sh</code></pre></div>
+  <p>Lo script cancella, in ordine:</p>
+  <ul>
+    <li>lo stack <code>AgentCore-TelcoCare-default</code>, con tutti i Runtime (<code>agent</code>, <code>clienti</code>, <code>fatturazione</code>), la Memory, il Gateway, le regole, gli endpoint e le valutazioni;</li>
+    <li>lo stack <code>telcocare-crm</code>, con la Lambda e la tabella degli accrediti;</li>
+    <li>il pool Cognito del Lab 7, il guardrail del Lab 8 e gli allarmi del Lab 10, se li hai creati;</li>
+    <li>i gruppi di log che restano dopo le risorse, cioè quelli con <code>TelcoCare</code> o <code>telcocare</code> nel nome.</li>
+  </ul>
+</li>
+<li>
+  <p>Controlla che non sia rimasto nulla.</p>
+  <div class="blocco"><pre><code>aws cloudformation describe-stacks --query "Stacks[?contains(StackName,'TelcoCare') || contains(StackName,'telcocare')].StackName"
+aws bedrock-agentcore-control list-agent-runtimes --query "agentRuntimes[?contains(agentRuntimeName,'TelcoCare')].agentRuntimeName"
+aws bedrock-agentcore-control list-memories --query "memories[?contains(id,'TelcoCare')].[id,status]"
+aws cognito-idp list-user-pools --max-results 20 --query "UserPools[?Name=='telcocare-clienti'].Id"
+aws bedrock list-guardrails --query "guardrails[?name=='telcocare-dati-personali'].id"</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  Cinque liste vuote, <code>[]</code>. Una Memory può restare qualche minuto nello stato <code>DELETING</code>: sparisce da sola.</div>
+</li>
+</ol>
+
+<div class="riquadro concetto"><span class="titolo">Cosa resta</span>
+<p>Restano lo stack <code>CDKToolkit</code>, creato al primo deploy, e l'impostazione di CloudWatch Transaction Search: non riguardano solo questo workshop, quindi lo script non li tocca. Restano anche i file nel tuo ambiente.</p>
+</div>

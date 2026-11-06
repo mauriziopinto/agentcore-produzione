@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 0 · Ripartenza</title>
+<link rel="stylesheet" href="assets/stile.css">
+</head>
+<body>
+<header class="testata">
+  <button class="menu-bottone" type="button">Menu</button>
+  <a href="index.html"><span class="marchio">AgentCore</span> in produzione</a>
+  <span class="spazio"></span>
+  <span>TelcoCare</span>
+</header>
+<div class="contenitore">
+<nav class="indice"></nav>
+<main>
+<h1>Lab 0 · Ripartenza</h1>
+<p class="sottotitolo">Ricrei TelcoCare com'era alla fine del primo workshop. Dieci minuti, quasi tutti di attesa.</p>
+
+<p>Gli ambienti sono nuovi, quindi TelcoCare non c'è più. Uno script lo ricostruisce: Runtime con Memory, Gateway con il CRM, regole Cedar, Code Interpreter e Browser. Mentre lavora, chi conduce il workshop presenta i messaggi chiave della giornata.</p>
+
+<ol class="passi">
+<li>
+  <p>Clona il repository del workshop. È privato: prima accetta l'invito GitHub che hai ricevuto per email. Come password, Git vuole un personal access token di GitHub, come nel primo workshop.</p>
+  <div class="blocco"><pre><code>git clone https://github.com/mauriziopinto/agentcore-produzione.git ~/agentcore-produzione
+cd ~/agentcore-produzione</code></pre></div>
+</li>
+<li>
+  <p>Imposta la regione e controlla l'ambiente.</p>
+  <div class="blocco"><pre><code>export AWS_REGION=us-east-1
+grep -q AWS_REGION ~/.bashrc || echo 'export AWS_REGION=us-east-1' &gt;&gt; ~/.bashrc
+bash scripts/verifica_ambiente.sh</code></pre></div>
+</li>
+<li>
+  <p>Ricostruisci TelcoCare.</p>
+  <div class="blocco"><pre><code>bash scripts/prepara_base.sh</code></pre></div>
+  <p>Lo script fa due deploy: il primo crea Runtime, Memory e Gateway, il secondo aggiunge le regole Cedar, che devono conoscere l'indirizzo del Gateway. Nelle nostre prove è durato 9 minuti e mezzo.</p>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  Alla fine, la risposta a una domanda di prova sulla fattura di Giulia:
+  <pre class="uscita">[strumento] crm___get_fatture
+Ciao Giulia, la tua fattura di ottobre 2026 (n. F2026-1021) è di 29,98 euro e risulta ancora da pagare. ...
+TelcoCare è pronto. Da qui in poi lavora nella cartella /home/participant/agentcore-produzione/TelcoCare.</pre></div>
+</li>
+<li>
+  <p>Entra nella cartella del progetto. Da qui partono tutti i comandi dei lab.</p>
+  <div class="blocco"><pre><code>cd ~/agentcore-produzione/TelcoCare</code></pre></div>
+</li>
+</ol>
+
+<div class="riquadro concetto"><span class="titolo">Cosa c'è di diverso dal primo workshop</span>
+<p>Le regole Cedar sono due. La prima consente sempre le letture e i ticket. La seconda consente gli accrediti fino a <strong>100 euro</strong>, non più 20: è il tetto massimo che nessuno può superare. Nel Lab 3 aggiungiamo un livello in mezzo, fra 20 e 100 euro, in cui decide una persona.</p>
+</div>
+
+<div class="riquadro attenzione"><span class="titolo">Se lo script si ferma</span>
+<p>Rilancialo solo dopo aver tolto quello che ha creato: <code>cd ~/agentcore-produzione/TelcoCare &amp;&amp; bash ../scripts/pulizia.sh &amp;&amp; cd .. &amp;&amp; rm -rf TelcoCare</code>. Poi <code>bash scripts/prepara_base.sh</code>.</p>
+</div>
+</main>
+</div>
+<script src="assets/sito.js"></script>
+</body>
+</html>

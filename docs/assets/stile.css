@@ -1,0 +1,237 @@
+:root {
+  --blu: #232f3e;
+  --arancio: #ff9900;
+  --testo: #1d2430;
+  --grigio: #5f6b7a;
+  --bordo: #d9dee5;
+  --sfondo: #f6f7f9;
+  --codice: #0f1720;
+  --ok: #1d8102;
+  --attenzione: #b35c00;
+  --kiro: #6b3fd4;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--testo);
+  background: #fff;
+}
+
+header.testata {
+  background: var(--blu);
+  color: #fff;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+header.testata a { color: #fff; text-decoration: none; font-weight: 600; }
+header.testata .marchio { color: var(--arancio); font-weight: 700; letter-spacing: .3px; }
+header.testata .spazio { flex: 1; }
+header.testata .menu-bottone { display: none; background: none; border: 1px solid #fff6; color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 15px; }
+
+.contenitore { display: flex; min-height: calc(100vh - 56px); }
+
+nav.indice {
+  width: 270px;
+  flex-shrink: 0;
+  background: var(--sfondo);
+  border-right: 1px solid var(--bordo);
+  padding: 22px 0;
+  position: sticky;
+  top: 56px;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+}
+nav.indice a {
+  display: block;
+  padding: 7px 24px;
+  color: var(--testo);
+  text-decoration: none;
+  font-size: 15px;
+  border-left: 3px solid transparent;
+}
+nav.indice a:hover { background: #eceff3; }
+nav.indice a.attivo { border-left-color: var(--arancio); background: #fff; font-weight: 600; }
+nav.indice .durata { color: var(--grigio); font-size: 13px; float: right; }
+nav.indice .gruppo { padding: 14px 24px 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--grigio); }
+
+main {
+  flex: 1;
+  max-width: 900px;
+  padding: 32px 48px 80px;
+}
+
+h1 { font-size: 32px; line-height: 1.25; margin: 0 0 8px; }
+h2 { font-size: 23px; margin: 40px 0 12px; padding-top: 8px; border-top: 1px solid var(--bordo); }
+h3 { font-size: 18px; margin: 28px 0 8px; }
+p.sottotitolo { color: var(--grigio); font-size: 18px; margin-top: 0; }
+
+a { color: #0b5cad; }
+
+code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background: #eef1f4;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.blocco {
+  position: relative;
+  margin: 12px 0 18px;
+}
+.blocco pre {
+  background: var(--codice);
+  color: #e6edf3;
+  padding: 16px 76px 16px 18px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+.blocco pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+.blocco .etichetta {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--grigio);
+  margin-bottom: 4px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+}
+.blocco button.copia {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ffffff1a;
+  color: #e6edf3;
+  border: 1px solid #ffffff33;
+  border-radius: 5px;
+  font-size: 12px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.blocco .etichetta + pre + button.copia,
+.blocco .etichetta ~ button.copia { top: 30px; }
+.blocco button.copia:hover { background: #ffffff33; }
+
+pre.uscita {
+  background: var(--sfondo);
+  color: var(--testo);
+  border: 1px solid var(--bordo);
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.riquadro {
+  border-left: 4px solid var(--grigio);
+  background: var(--sfondo);
+  padding: 12px 18px;
+  border-radius: 0 8px 8px 0;
+  margin: 18px 0;
+}
+.riquadro > :first-child { margin-top: 0; }
+.riquadro > :last-child { margin-bottom: 0; }
+.riquadro .titolo { font-weight: 700; display: block; margin-bottom: 4px; }
+.riquadro.concetto { border-left-color: #0b5cad; background: #eef5fc; }
+.riquadro.verifica { border-left-color: var(--ok); background: #eef7ea; }
+.riquadro.attenzione { border-left-color: var(--attenzione); background: #fdf3e7; }
+.riquadro.kiro { border-left-color: var(--kiro); background: #f3effc; }
+
+ol.passi { padding-left: 0; list-style: none; counter-reset: passo; }
+ol.passi > li {
+  counter-increment: passo;
+  position: relative;
+  padding-left: 44px;
+  margin-bottom: 26px;
+}
+ol.passi > li::before {
+  content: counter(passo);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--blu);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 15px; }
+th, td { border: 1px solid var(--bordo); padding: 8px 12px; text-align: left; vertical-align: top; }
+th { background: var(--sfondo); }
+
+.architettura {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin: 18px 0;
+}
+.architettura .casella {
+  border: 1px solid var(--bordo);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  font-size: 15px;
+}
+.architettura .casella strong { display: block; margin-bottom: 2px; }
+.architettura .casella .lab { font-size: 12px; color: #fff; background: var(--arancio); border-radius: 10px; padding: 1px 8px; float: right; }
+
+.navigazione {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 56px;
+  padding-top: 20px;
+  border-top: 1px solid var(--bordo);
+}
+.navigazione a {
+  text-decoration: none;
+  border: 1px solid var(--bordo);
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: var(--testo);
+}
+.navigazione a:hover { border-color: var(--arancio); }
+
+@media (max-width: 900px) {
+  header.testata .menu-bottone { display: inline-block; }
+  nav.indice { display: none; position: fixed; top: 56px; left: 0; z-index: 9; box-shadow: 2px 0 12px #0003; }
+  nav.indice.aperto { display: block; }
+  main { padding: 24px 20px 60px; }
+  .architettura { grid-template-columns: 1fr; }
+}
+
+/* Workshop 2: la regola di ogni lab e le domande di verifica */
+.riquadro.regola { border-left-color: var(--arancio); background: #fff6e6; font-size: 18px; }
+.riquadro.regola .titolo { color: #a35f00; }
+
+.verifica-capito { margin: 28px 0; }
+.verifica-capito h2 { margin-bottom: 8px; }
+.verifica-capito details {
+  border: 1px solid var(--bordo);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin: 10px 0;
+  background: #fff;
+}
+.verifica-capito summary { cursor: pointer; font-weight: 600; }
+.verifica-capito details[open] summary { margin-bottom: 8px; }
+
+.misura { font-size: 14px; color: var(--grigio); }
+.lens { font-size: 14px; color: var(--grigio); margin-top: -4px; }

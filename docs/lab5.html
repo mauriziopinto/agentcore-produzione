@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 5 · Guasti e retry</title>
+<link rel="stylesheet" href="assets/stile.css">
+</head>
+<body>
+<header class="testata">
+  <button class="menu-bottone" type="button">Menu</button>
+  <a href="index.html"><span class="marchio">AgentCore</span> in produzione</a>
+  <span class="spazio"></span>
+  <span>TelcoCare</span>
+</header>
+<div class="contenitore">
+<nav class="indice"></nav>
+<main>
+<h1>Lab 5 · Guasti e retry</h1>
+<p class="sottotitolo">Il CRM va in timeout dopo aver salvato l'accredito. L'agente riprova, e il cliente riceve due accrediti. Venticinque minuti.</p>
+<p class="lens">Agentic AI Lens: AGENTREL06 (integrazione con fallback e idempotenza), AGENTCOST01 (limiti al ciclo di ragionamento).</p>
+
+<div class="riquadro attenzione"><span class="titolo">Prima di tutto, una volta sola</span>
+<p>I lab da fare da soli usano un codice comune, che contiene tutti i pezzi dal Lab 5 all'11. Pubblicalo prima di cominciare il primo di questi lab, qualunque sia. Dopo, ogni lab cambia solo l'infrastruttura, quindi puoi farli in qualunque ordine.</p>
+<div class="blocco"><pre><code>cd ~/agentcore-produzione/TelcoCare
+bash ../scripts/prepara_percorso.sh</code></pre></div>
+</div>
+
+<div class="riquadro concetto"><span class="titolo">Concetto: il retry che raddoppia</span>
+<p>Quando uno strumento risponde con un errore, il modello spesso riprova: è un comportamento utile per gli errori di lettura. Per uno strumento che scrive è pericoloso, perché l'errore può arrivare <em>dopo</em> che la scrittura è avvenuta. Chi chiama vede un fallimento, riprova, e la scrittura si ripete.</p>
+<p>La soluzione standard dei sistemi distribuiti è l'<em>idempotenza</em>: la stessa richiesta, ripetuta, produce lo stesso effetto una volta sola.</p>
+</div>
+
+<ol class="passi">
+<li>
+  <p>Aggiorna il CRM. Ora gli accrediti finiscono in una tabella DynamoDB, e un parametro simula un guasto: la Lambda salva l'accredito, poi aspetta 15 secondi e va in timeout, perché il suo limite è 10.</p>
+  <div class="blocco"><pre><code>aws cloudformation deploy --stack-name telcocare-crm --template-file ../risorse/lab5/crm-lambda.yaml \
+  --capabilities CAPABILITY_IAM --parameter-overrides RitardoSecondi=15 Idempotenza=no</code></pre></div>
+</li>
+
+<li>
+  <p>Chiedi un accredito da 15 euro.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --utente r1 --sessione guasto "Sono un operatore del back office. Registra un accredito di 15 euro per il cliente C002, motivo: rimborso doppio canone di ottobre."</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  Nella nostra prova l'agente ha chiamato lo strumento due volte e ha concluso: <em>"Ho provato due volte e il sistema ha risposto ogni volta con un errore interno, quindi l'accredito non risulta emesso."</em></div>
+</li>
+
+<li>
+  <p>Guarda cosa c'è davvero nella tabella.</p>
+  <div class="blocco"><pre><code>aws dynamodb scan --table-name telcocare-accrediti \
+  --query 'Items[].[id_cliente.S,importo_euro.N,motivo.S]' --output table</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  <pre class="uscita">C002   15   rimborso doppio canone di ottobre
+C002   15   rimborso doppio canone di ottobre</pre>
+  Due accrediti, mentre l'agente ha detto al cliente che non ce n'è nessuno. È il caso peggiore: un errore di soldi e un'informazione sbagliata insieme.</div>
+</li>
+
+<li>
+  <p>Attiva l'idempotenza, lasciando il guasto acceso, e ripeti con un altro cliente.</p>
+  <div class="blocco"><pre><code>aws cloudformation deploy --stack-name telcocare-crm --template-file ../risorse/lab5/crm-lambda.yaml \
+  --capabilities CAPABILITY_IAM --parameter-overrides RitardoSecondi=15 Idempotenza=si
+python3 ../scripts/chiedi.py --utente r2 --sessione guasto "Sono un operatore del back office. Registra un accredito di 12 euro per il cliente C003, motivo: ritardo attivazione."
+aws dynamodb scan --table-name telcocare-accrediti \
+  --query 'Items[].[id_cliente.S,importo_euro.N,motivo.S]' --output table</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  Un solo accredito per C003. Il primo tentativo salva e va in timeout. Il secondo trova la stessa chiave e risponde che l'accredito era già stato salvato, così l'agente può dire al cliente la cosa giusta.</div>
+  <div class="blocco"><span class="etichetta">risorse/lab5/crm-lambda.yaml (estratto)</span><pre><code>base = f"{id_cliente}|{importo}|{oggi}"
+chiave = hashlib.sha256(base.encode()).hexdigest()[:16]
+TABELLA.put_item(Item={"id": chiave, ...}, ConditionExpression="attribute_not_exists(id)")</code></pre></div>
+</li>
+
+<li>
+  <p>Spegni il guasto.</p>
+  <div class="blocco"><pre><code>aws cloudformation deploy --stack-name telcocare-crm --template-file ../risorse/lab5/crm-lambda.yaml \
+  --capabilities CAPABILITY_IAM --parameter-overrides RitardoSecondi=0 Idempotenza=si</code></pre></div>
+</li>
+</ol>
+
+<h2>Un tetto al lavoro di una richiesta</h2>
+<p>L'idempotenza protegge i dati. Serve anche un limite al lavoro di una singola richiesta, per esempio contro un agente che riprova all'infinito uno strumento guasto. Nel codice comune c'è già:</p>
+<div class="blocco"><span class="etichetta">app/agent/main.py (estratto)</span><pre><code>LIMITI = {"turns": 8, "total_tokens": 40000}
+...
+async for event in agent.stream_async(richiesta, limits=LIMITI):</code></pre></div>
+<p>Quando l'agente raggiunge il limite si ferma, e il codice risponde al cliente con una frase fissa invece di lasciarlo senza risposta. Per vederlo, abbassa per un momento <code>"turns"</code> a 2 in <code>app/agent/main.py</code>, pubblica e chiedi qualcosa che richiede tre strumenti:</p>
+<div class="blocco"><pre><code>python3 ../scripts/chiedi.py --utente r3 --sessione limite "Sono il cliente C003. Controlla le mie linee, poi le fatture, poi apri un ticket per la linea lenta."</code></pre></div>
+<pre class="uscita">[strumento] crm___get_cliente
+[strumento] crm___get_fatture
+[strumento] crm___apri_ticket
+[limite raggiunto] limit_turns: l'agente si è fermato prima di finire
+Mi scusi, la richiesta ha richiesto più passaggi del previsto e mi sono fermato. Un operatore la ricontatterà.</pre>
+<p>Rimetti il limite a 8 e pubblica di nuovo.</p>
+
+<div class="riquadro regola"><span class="titolo">La regola</span>Ogni strumento che scrive deve reggere un retry. L'idempotenza sta nello strumento, perché l'agente non può sapere se l'errore è arrivato prima o dopo la scrittura.</div>
+
+<div class="verifica-capito">
+<h2>Hai capito?</h2>
+<details><summary>Perché non basta dire nel prompt "non riprovare gli accrediti"?</summary>
+<p>Perché è un'istruzione al modello, che può non seguirla, e perché a volte riprovare è giusto: se l'errore è arrivato prima della scrittura, l'accredito va fatto. Solo lo strumento sa se la scrittura c'è stata.</p></details>
+<details><summary>Che chiave di idempotenza usa il CRM, e che limite ha?</summary>
+<p>Cliente, importo e giorno. Due accrediti uguali allo stesso cliente nello stesso giorno diventano uno solo, anche se fossero due richieste legittime. In un sistema vero la chiave arriva dalla richiesta originale, per esempio dall'ID della pratica.</p></details>
+<details><summary>A cosa servono i limiti se c'è già l'idempotenza?</summary>
+<p>A cose diverse. L'idempotenza evita il danno ai dati. I limiti evitano che una richiesta consumi tempo e token senza fine, e garantiscono che il cliente riceva comunque una risposta.</p></details>
+</div>
+</main>
+</div>
+<script src="assets/sito.js"></script>
+</body>
+</html>

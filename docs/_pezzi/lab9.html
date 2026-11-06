@@ -1,0 +1,79 @@
+<!-- titolo: Lab 9 · Agenti di team diversi -->
+<h1>Lab 9 · Agenti di team diversi</h1>
+<p class="sottotitolo">Lo specialista fatturazione diventa un agente a sé, su un suo Runtime, con il suo ruolo. Il supervisore lo chiama con il protocollo A2A. Venticinque minuti.</p>
+<p class="lens">Agentic AI Lens: AGENTSEC06 (comunicazione fra agenti, confini di fiducia), AGENTREL04 (fallback nella collaborazione).</p>
+
+<p>Prima di cominciare, se non l'hai già fatto, pubblica il codice comune dei lab da fare da soli con <code>bash ../scripts/prepara_percorso.sh</code> (vedi il Lab 5).</p>
+
+<div class="riquadro concetto"><span class="titolo">Concetto: A2A su AgentCore Runtime</span>
+<p>A2A (Agent-to-Agent) è un protocollo aperto per far parlare agenti diversi, anche scritti con framework diversi. Ogni agente pubblica una <em>agent card</em>, che descrive cosa sa fare, e riceve messaggi JSON-RPC. AgentCore Runtime ospita server A2A: li chiami con le stesse autenticazioni degli altri Runtime, IAM o OAuth.</p>
+<p>Nel Lab 4 gli specialisti erano funzioni dentro lo stesso Runtime. Qui lo specialista fatturazione ha il suo Runtime e il suo ruolo IAM: potrebbe svilupparlo e pubblicarlo un altro team, con i suoi tempi.</p>
+</div>
+
+<ol class="passi">
+<li>
+  <p>Aggiungi il Runtime <code>fatturazione</code> con il protocollo A2A e copia il suo codice.</p>
+  <div class="blocco"><pre><code>agentcore add runtime --name fatturazione --language python --protocol A2A
+cp -R ../risorse/lab9/fatturazione/. app/fatturazione/</code></pre></div>
+  <div class="blocco"><span class="etichetta">app/fatturazione/main.py (estratto)</span><pre><code>def create_agent(context_id: str) -&gt; Agent:
+    return Agent(
+        name="fatturazione",
+        description="Specialista fatturazione TelcoCare: legge fatture e pagamenti dei clienti dal CRM.",
+        tools=[get_gateway_client(consentiti=["crm___get_cliente", "crm___get_fatture"])],
+        ...
+    )
+
+# serve_a2a ascolta su 0.0.0.0:9000, come chiede AgentCore per il protocollo A2A,
+# e pubblica l'agent card su /.well-known/agent-card.json.
+serve_a2a(StrandsA2AExecutor(agent_factory=create_agent))</code></pre></div>
+</li>
+
+<li>
+  <p>Pubblica. Lo stack CDK del codice comune dà al Runtime <code>agent</code> il permesso di invocare <code>fatturazione</code>, e solo quello, e gli passa il suo ARN. Nelle nostre prove il deploy è durato 5 minuti.</p>
+  <div class="blocco"><span class="etichetta">agentcore/cdk/lib/cdk-stack.ts (estratto)</span><pre><code>const fatturazione = this.application.runtime('fatturazione');
+fatturazione.grantInvoke(agent);
+// grantInvoke non include la lettura dell'agent card: senza questo permesso A2A risponde 403.
+agent.grant(['bedrock-agentcore:GetAgentCard'], [fatturazione.runtimeArn, ...]);
+agent.addEnvironmentVariable('FATTURAZIONE_ARN', fatturazione.runtimeArn);</code></pre></div>
+  <div class="blocco"><pre><code>agentcore deploy</code></pre></div>
+</li>
+
+<li>
+  <p>Chiedi al supervisore una cosa di fatturazione. Lo specialista ora è remoto.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --modalita remoto --utente a9 --sessione remoto \
+  "Sono il cliente C002. La fattura di ottobre è giusta?"</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  La risposta sulla fattura doppia, e un conto con il solo supervisore:
+  <pre class="uscita">[costo] remoto (supervisore + fatturazione via A2A): 1895 token in ingresso, 338 in uscita, 2 chiamate al modello, 26.6 s
+        supervisore: 1895 in, 338 out, 2 chiamate</pre>
+  I token dello specialista non compaiono qui: li consuma e li registra il suo Runtime. La prima chiamata è lenta perché il Runtime remoto parte a freddo.</div>
+</li>
+
+<li>
+  <p>Guarda le due trace, una per Runtime.</p>
+  <div class="blocco"><pre><code>agentcore traces runtime list --name agent --since 15m --limit 3
+agentcore traces runtime list --name fatturazione --since 15m --limit 3</code></pre></div>
+</li>
+</ol>
+
+<div class="riquadro attenzione"><span class="titolo">Una trappola che abbiamo trovato</span>
+<p>Con il solo <code>grantInvoke</code>, la chiamata A2A falliva con <code>403 Forbidden</code> sulla lettura dell'agent card, e il supervisore rispondeva al cliente con un generico errore di autorizzazione. La lettura della card è un'azione IAM separata, <code>bedrock-agentcore:GetAgentCard</code>. Se il supervisore dice che non riesce ad accedere alla fatturazione, guarda nei log del Runtime <code>agent</code>:</p>
+<div class="blocco"><pre><code>agentcore logs runtime --name agent --since 10m | grep -o "agent-card.json: Client error[^']*" | head -2</code></pre></div>
+</div>
+
+<div class="riquadro concetto"><span class="titolo">Cosa cambia rispetto al Lab 4</span>
+<p>La separazione dei permessi ora è IAM, non solo codice. Il Runtime <code>fatturazione</code> ha il suo ruolo, e il suo client vede solo gli strumenti di lettura. Il Runtime <code>clienti</code> del Lab 7, invece, non ha il permesso di invocare <code>fatturazione</code>: nello stack nessuno glielo dà.</p>
+<p>Il prezzo è nei tempi e nella complessità: una chiamata di rete in più, due Runtime da pubblicare, due trace da collegare. Conviene quando gli agenti appartengono davvero a team o domini diversi.</p>
+</div>
+
+<div class="riquadro regola"><span class="titolo">La regola</span>Fra agenti vale il minimo privilegio, come fra servizi. Ogni agente ha il suo ruolo, e può chiamare solo gli agenti e gli strumenti che gli servono.</div>
+
+<div class="verifica-capito">
+<h2>Hai capito?</h2>
+<details><summary>Che differenza c'è fra lo specialista del Lab 4 e quello del Lab 9?</summary>
+<p>Nel Lab 4 lo specialista è una funzione nello stesso Runtime: stesso ruolo IAM, stesso deploy. Nel Lab 9 ha un Runtime suo, con un ruolo suo, un deploy indipendente e un'interfaccia standard. La separazione è garantita da IAM.</p></details>
+<details><summary>Perché i token dello specialista non sono nel conto del supervisore?</summary>
+<p>Perché lo specialista gira altrove. Il costo di una conversazione è la somma dei costi di tutti i Runtime coinvolti: per vederlo intero servono le metriche o le trace di entrambi.</p></details>
+<details><summary>Si può mettere un agente A2A dentro uno swarm di Strands?</summary>
+<p>Oggi no: la documentazione di Strands dice che <code>A2AAgent</code> funziona come nodo di un grafo o come strumento, ma non dentro uno swarm, perché lo swarm usa passaggi di consegne che il protocollo A2A non prevede ancora.</p></details>
+</div>

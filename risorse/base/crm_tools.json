@@ -1,0 +1,70 @@
+[
+  {
+    "name": "get_cliente",
+    "description": "Restituisce i dati di un cliente TelcoCare: nome, offerta attiva, linee e metodo di pagamento.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id_cliente": {
+          "type": "string",
+          "description": "Codice cliente, per esempio C001"
+        }
+      },
+      "required": ["id_cliente"]
+    }
+  },
+  {
+    "name": "get_fatture",
+    "description": "Restituisce le ultime fatture di un cliente con importo, stato ed eventuali note.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id_cliente": {
+          "type": "string",
+          "description": "Codice cliente, per esempio C001"
+        }
+      },
+      "required": ["id_cliente"]
+    }
+  },
+  {
+    "name": "apri_ticket",
+    "description": "Apre un ticket di assistenza tecnica o amministrativa per un cliente.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id_cliente": {
+          "type": "string",
+          "description": "Codice cliente, per esempio C001"
+        },
+        "descrizione": {
+          "type": "string",
+          "description": "Descrizione del problema"
+        }
+      },
+      "required": ["id_cliente", "descrizione"]
+    }
+  },
+  {
+    "name": "emetti_accredito",
+    "description": "Registra un accredito in euro sulla prossima fattura del cliente, per esempio per rimborsare un addebito errato.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id_cliente": {
+          "type": "string",
+          "description": "Codice cliente, per esempio C001"
+        },
+        "importo_euro": {
+          "type": "integer",
+          "description": "Importo dell'accredito in euro, numero intero"
+        },
+        "motivo": {
+          "type": "string",
+          "description": "Motivo dell'accredito"
+        }
+      },
+      "required": ["id_cliente", "importo_euro", "motivo"]
+    }
+  }
+]

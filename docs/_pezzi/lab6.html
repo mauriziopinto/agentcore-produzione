@@ -1,0 +1,69 @@
+<!-- titolo: Lab 6 · Grafo e controllore -->
+<h1>Lab 6 · Grafo e controllore</h1>
+<p class="sottotitolo">Un reclamo segue sempre gli stessi passi. Li scrive il codice, il modello lavora dentro ogni passo, e un controllore rilegge la risposta prima che parta. Venticinque minuti.</p>
+<p class="lens">Agentic AI Lens: AGENTPERF02 (percorsi di esecuzione), AGENTPERF05-BP01 (orchestrazione con limiti di profondità e timeout).</p>
+
+<p>Prima di cominciare, se non l'hai già fatto, pubblica il codice comune dei lab da fare da soli con <code>bash ../scripts/prepara_percorso.sh</code> (vedi il Lab 5).</p>
+
+<div class="riquadro concetto"><span class="titolo">Concetto: grafo a passi fissi e controllore</span>
+<p>In un <strong>grafo</strong> (in Strands, <code>GraphBuilder</code>) i nodi sono agenti e gli archi sono le dipendenze. L'ordine dei passi e le condizioni per passare da uno all'altro sono codice Python: nessun modello decide quale passo viene dopo.</p>
+<p>Il <strong>controllore</strong> è il pattern <em>evaluator-optimizer</em>: un agente legge la bozza di un altro e, se non rispetta le regole, la rimanda indietro con le correzioni. Nel grafo è un arco che torna al redattore.</p>
+</div>
+
+<pre class="uscita">verifica ──(addebito errato)──▶ rimborso ──▶ redattore ──▶ controllore ──(APPROVATO)──▶ fine
+    └──────(nessun errore)─────────────────────▲     ▲                │
+                                                     └──(DA RIFARE)───┘</pre>
+
+<div class="blocco"><span class="etichetta">app/agent/reclamo.py (estratto)</span><pre><code>def addebito_errato(state) -&gt; bool:
+    return "ADDEBITO_ERRATO: SI" in _testo(state, "verifica").upper()
+
+g.add_edge("verifica", "rimborso", condition=addebito_errato)
+g.add_edge("verifica", "redattore", condition=nessun_addebito_errato)
+g.add_edge("rimborso", "redattore")
+g.add_edge("redattore", "controllore")
+g.add_edge("controllore", "redattore", condition=da_rifare)
+# Limiti obbligatori con un ciclo nel grafo: al massimo 8 passi e 3 minuti in tutto.
+g.set_max_node_executions(8)
+g.set_execution_timeout(180)</code></pre></div>
+<p>Ogni nodo vede solo gli strumenti che gli servono: la verifica legge cliente e fatture, il rimborso può solo emettere accrediti, redattore e controllore non hanno strumenti.</p>
+
+<ol class="passi">
+<li>
+  <p>Un reclamo con un addebito errato: Giulia, fattura di ottobre doppia.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --modalita reclamo --utente g6 --sessione reclamo1 \
+  "Sono Giulia Bianchi, cliente C002. Reclamo: la fattura di ottobre è il doppio del solito."</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  La lettera per la cliente, poi il percorso fatto:
+  <pre class="uscita">[percorso] verifica -&gt; rimborso -&gt; redattore -&gt; controllore  [stato] Status.COMPLETED
+[ultimo controllo] APPROVATO</pre>
+  Il passo <code>rimborso</code> c'è perché la verifica ha trovato l'addebito errato.</div>
+</li>
+
+<li>
+  <p>Un reclamo senza errori: Mario, fattura di ottobre uguale a settembre.</p>
+  <div class="blocco"><pre><code>python3 ../scripts/chiedi.py --modalita reclamo --utente m6 --sessione reclamo2 \
+  "Sono Mario Rossi, cliente C001. Reclamo: la fattura di ottobre mi sembra sbagliata."</code></pre></div>
+  <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
+  Niente rimborso. Nella nostra prova il controllore ha rimandato indietro la prima bozza, e il percorso è stato:
+  <pre class="uscita">[percorso] verifica -&gt; redattore -&gt; controllore -&gt; redattore -&gt; controllore  [stato] Status.COMPLETED
+[ultimo controllo] APPROVATO</pre>
+  Il ciclo si vede solo quando la prima bozza viola una regola. Se nel tuo caso non succede, rendi il controllore più severo: in <code>app/agent/reclamo.py</code> abbassa il limite di 120 parole a 50, pubblica e riprova.</div>
+</li>
+</ol>
+
+<div class="riquadro concetto"><span class="titolo">Quando un grafo e quando un agente libero</span>
+<p>Il grafo conviene quando i passi sono noti e vanno fatti sempre, nello stesso ordine, con un controllo: reclami, approvazioni, verifiche di conformità. Ogni esecuzione segue un percorso che puoi leggere e spiegare a un revisore. L'agente libero conviene quando il percorso dipende davvero dalla conversazione.</p>
+<p>Per processi lunghi, che durano ore o giorni o devono sopravvivere a un riavvio, la lens suggerisce AWS Step Functions, con l'agente chiamato solo nei passi in cui serve ragionare. Qui il grafo vive dentro una sola richiesta al Runtime.</p>
+</div>
+
+<div class="riquadro regola"><span class="titolo">La regola</span>Se i passi sono noti, li scrive il codice e non il modello. Il modello lavora dentro i passi, un controllore rilegge prima che la risposta parta, e un ciclo ha sempre un numero massimo di giri.</div>
+
+<div class="verifica-capito">
+<h2>Hai capito?</h2>
+<details><summary>Chi decide se fare il rimborso, il modello o il codice?</summary>
+<p>Il modello della verifica scrive <code>ADDEBITO_ERRATO: SI</code> o <code>NO</code>, ma il passaggio al rimborso lo decide la condizione dell'arco, che è codice. Il rimborso non può partire se la verifica non lo dice in quella forma esatta.</p></details>
+<details><summary>Perché il controllore ha senso se è anche lui un modello?</summary>
+<p>Perché ha un compito più semplice e regole esplicite: controllare una bozza è più facile che scriverla. Non è una garanzia, ma prende errori che il redattore non vede, come una fattura non citata o una promessa non registrata.</p></details>
+<details><summary>Cosa succederebbe senza <code>set_max_node_executions</code>?</summary>
+<p>Con un ciclo nel grafo, un controllore troppo severo o un redattore che non corregge potrebbero rimbalzarsi la bozza molte volte, consumando token e tempo. Il limite garantisce che il grafo finisca.</p></details>
+</div>

@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Workshop AgentCore - Lab 3. Una Lambda che simula il CRM di TelcoCare.
+  Non ha URL pubblici: la chiama solo il Gateway di AgentCore con il suo ruolo IAM.
+
+Resources:
+  CrmRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  CrmFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: telcocare-crm
+      Description: CRM simulato di TelcoCare (workshop AgentCore)
+      Runtime: python3.13
+      Architectures: [arm64]
+      Handler: index.handler
+      Timeout: 10
+      MemorySize: 256
+      Role: !GetAtt CrmRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import uuid
+
+          CLIENTI = {
+              "C001": {
+                  "nome": "Mario Rossi",
+                  "offerta": "Casa Fibra 2.5 Gbps + Mobile 150 GB",
+                  "linee": ["fibra 02 1234567", "mobile 333 1111111"],
+                  "metodo_pagamento": "addebito su conto",
+              },
+              "C002": {
+                  "nome": "Giulia Bianchi",
+                  "offerta": "Mobile 300 GB 5G",
+                  "linee": ["mobile 347 2222222", "mobile 347 2222223"],
+                  "metodo_pagamento": "carta di credito",
+              },
+              "C003": {
+                  "nome": "Luca Verdi",
+                  "offerta": "Casa Fibra 1 Gbps",
+                  "linee": ["fibra 06 7654321"],
+                  "metodo_pagamento": "bollettino",
+              },
+          }
+
+          FATTURE = {
+              "C001": [
+                  {"numero": "F2026-0912", "mese": "settembre 2026", "importo_euro": 39.95, "stato": "pagata"},
+                  {"numero": "F2026-1012", "mese": "ottobre 2026", "importo_euro": 39.95, "stato": "pagata"},
+              ],
+              "C002": [
+                  {"numero": "F2026-0921", "mese": "settembre 2026", "importo_euro": 14.99, "stato": "pagata"},
+                  {"numero": "F2026-1021", "mese": "ottobre 2026", "importo_euro": 29.98, "stato": "da pagare",
+                   "nota": "addebitato due volte il canone di ottobre"},
+              ],
+              "C003": [
+                  {"numero": "F2026-1033", "mese": "ottobre 2026", "importo_euro": 27.95, "stato": "scaduta"},
+              ],
+          }
+
+
+          def _risposta(dati):
+              return json.dumps(dati, ensure_ascii=False)
+
+
+          def handler(event, context):
+              # Il Gateway passa gli argomenti dello strumento come evento e il nome
+              # dello strumento nel client context, nella forma <target>___<strumento>.
+              nome = context.client_context.custom["bedrockAgentCoreToolName"]
+              strumento = nome.split("___", 1)[-1]
+              print(json.dumps({"strumento": strumento, "argomenti": event}, ensure_ascii=False))
+
+              id_cliente = str(event.get("id_cliente", "")).upper()
+              if id_cliente not in CLIENTI:
+                  return _risposta({"errore": f"cliente {id_cliente} non trovato"})
+
+              if strumento == "get_cliente":
+                  return _risposta({"id_cliente": id_cliente, **CLIENTI[id_cliente]})
+
+              if strumento == "get_fatture":
+                  return _risposta({"id_cliente": id_cliente, "fatture": FATTURE[id_cliente]})
+
+              if strumento == "apri_ticket":
+                  ticket = "TK-" + uuid.uuid4().hex[:6].upper()
+                  return _risposta({"ticket": ticket, "stato": "aperto",
+                                    "descrizione": event.get("descrizione", "")})
+
+              if strumento == "emetti_accredito":
+                  return _risposta({"esito": "accredito registrato",
+                                    "id_cliente": id_cliente,
+                                    "importo_euro": event.get("importo_euro"),
+                                    "motivo": event.get("motivo", ""),
+                                    "nella_fattura_di": "novembre 2026"})
+
+              return _risposta({"errore": f"strumento {strumento} sconosciuto"})
+
+Outputs:
+  CrmFunctionArn:
+    Description: ARN della Lambda, da usare come target del Gateway
+    Value: !GetAtt CrmFunction.Arn
