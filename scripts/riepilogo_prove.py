@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Riassume l'output JSON di `agentcore eval ondemand simulate` e fa da cancello di qualità.
+"""Riassume l'output JSON di `agentcore eval ondemand simulate` e fa da quality gate.
 
 Uso:
     agentcore eval ondemand simulate ... --json > risultati.json
     python3 ../scripts/riepilogo_prove.py risultati.json            # soglia 100%
     python3 ../scripts/riepilogo_prove.py risultati.json --soglia 90
 
-Stampa una riga per ogni prova, con l'esito di ogni valutatore, e alla fine la percentuale
-di prove superate. Esce con codice 1 se la percentuale è sotto la soglia: in una pipeline
+Stampa una riga per ogni test, con l'esito di ogni valutatore, e alla fine la percentuale
+di test superati. Esce con codice 1 se la percentuale è sotto la soglia: in una pipeline
 questo ferma il rilascio.
 """
 import argparse
@@ -18,8 +18,8 @@ import sys
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("file", help="file JSON prodotto da simulate --json")
-    p.add_argument("--soglia", type=float, default=100.0, help="percentuale minima di prove superate (default 100)")
-    p.add_argument("--dettagli", action="store_true", help="stampa anche la spiegazione dei valutatori per le prove fallite")
+    p.add_argument("--soglia", type=float, default=100.0, help="percentuale minima di test superati (default 100)")
+    p.add_argument("--dettagli", action="store_true", help="stampa anche la spiegazione dei valutatori per i test falliti")
     a = p.parse_args()
 
     dati = json.load(open(a.file))
@@ -32,7 +32,7 @@ def main() -> None:
         esiti.setdefault(prova, {})[valutatore] = (r.get("value"), r.get("explanation") or r.get("errorMessage") or "")
 
     valutatori = sorted({v for e in esiti.values() for v in e})
-    print(f"{'prova':<22}" + "".join(f"{v:<26}" for v in valutatori))
+    print(f"{'test':<22}" + "".join(f"{v:<26}" for v in valutatori))
     superate = 0
     for prova in sorted(esiti):
         riga = f"{prova:<22}"
@@ -58,11 +58,11 @@ def main() -> None:
     for f in dati.get("failures", []):
         print(f"[errore] {f}")
     percentuale = 100.0 * superate / totale if totale else 0.0
-    print(f"\nProve superate: {superate} su {totale} ({percentuale:.0f}%), soglia {a.soglia:.0f}%")
+    print(f"\nTest superati: {superate} su {totale} ({percentuale:.0f}%), soglia {a.soglia:.0f}%")
     if percentuale < a.soglia:
-        print("CANCELLO CHIUSO: questa versione non va rilasciata.")
+        print("QUALITY GATE CHIUSO: questa versione non va rilasciata.")
         sys.exit(1)
-    print("CANCELLO APERTO: la versione si può rilasciare.")
+    print("QUALITY GATE APERTO: la versione si può rilasciare.")
 
 
 if __name__ == "__main__":

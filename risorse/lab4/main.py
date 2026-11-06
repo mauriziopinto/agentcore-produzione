@@ -87,7 +87,7 @@ def create_app():
     async def invoke(payload, context):
         session_id = getattr(context, "session_id", None) or "default-session"
 
-        # Lab 4: confronto fra agente singolo, supervisore e instradamento deterministico.
+        # Lab 4: confronto fra agente singolo, supervisore e routing deterministico.
         modalita = payload.get("modalita")
         if modalita in MODALITA:
             domanda, _ = parse_payload(payload)

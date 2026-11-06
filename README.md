@@ -2,7 +2,7 @@
 
 Repository del secondo workshop su Amazon Bedrock AgentCore. I partecipanti riprendono TelcoCare,
 l'assistente clienti di un operatore telco di fantasia costruito nel primo workshop, e lo preparano
-per la produzione: prove automatiche, rilasci reversibili, controlli fuori dal modello, pattern
+per la produzione: test automatici, rilasci reversibili, controlli fuori dal modello, pattern
 multi-agente, guasti e retry, identità dell'utente, dati personali, allarmi.
 
 Le istruzioni sono nel sito statico in `docs/`. Le pagine si generano dai file in `docs/_pezzi/`
@@ -13,8 +13,8 @@ con `python3 docs/_pezzi/costruisci.py`.
 | Parte | Lab |
 | --- | --- |
 | Partenza | 0 Ripartenza: `scripts/prepara_base.sh` ricrea TelcoCare com'era alla fine del primo workshop |
-| In aula | 1 Prove prima del rilascio, 2 Rilascio reversibile, 3 Il controllo sta fuori dal modello, 4 Più agenti solo se serve |
-| Da soli (72 ore) | 5 Guasti e retry, 6 Grafo e controllore, 7 Identità dell'utente, 8 Dati personali, 9 Agenti di team diversi (A2A), 10 Allarmi, 11 Swarm |
+| In aula | 1 Test prima del rilascio, 2 Rilascio reversibile, 3 Il controllo sta fuori dal modello, 4 Più agenti solo se serve |
+| Da soli (72 ore) | 5 Guasti e retry, 6 Grafo ed evaluator, 7 Identità dell'utente, 8 Dati personali, 9 Agenti di team diversi (A2A), 10 Allarmi, 11 Swarm |
 
 I lab da 5 a 11 partono da `scripts/prepara_percorso.sh`, che pubblica un codice comune
 (`risorse/percorso/`). Dopo, ogni lab cambia solo l'infrastruttura e l'ordine è libero.
@@ -27,7 +27,7 @@ I lab da 5 a 11 partono da `scripts/prepara_percorso.sh`, che pubblica un codice
 | `risorse/base/` | Il TelcoCare di partenza |
 | `risorse/labN/` | I file dei lab in aula e quelli specifici dei lab da soli |
 | `risorse/percorso/` | Il codice comune dei lab da 5 a 11 |
-| `scripts/` | Script di supporto: preparazione, prove e cancello di qualità, endpoint, confronto dei pattern, Cognito, guardrail, log, allarmi, pulizia |
+| `scripts/` | Script di supporto: preparazione, test e quality gate, endpoint, confronto dei pattern, Cognito, guardrail, log, allarmi, pulizia |
 | `infra/sito.yaml` | Pubblicazione del sito: bucket S3 privato e CloudFront con Origin Access Control |
 
 ## Requisiti dell'ambiente

@@ -23,7 +23,7 @@
 <p>Prima di cominciare, se non l'hai già fatto, pubblica il codice comune dei lab da fare da soli con <code>bash ../scripts/prepara_percorso.sh</code> (vedi il Lab 5).</p>
 
 <div class="riquadro concetto"><span class="titolo">Concetto: lo swarm</span>
-<p>In uno <em>swarm</em> ogni agente decide da solo se rispondere o passare il caso a un collega, con uno strumento di passaggio di consegne. Non c'è un supervisore, e non c'è un grafo. È il pattern più flessibile e il più difficile da prevedere: niente nella struttura impedisce a due agenti di rimbalzarsi un caso. Per questo Strands ha limiti espliciti:</p>
+<p>In uno <em>swarm</em> ogni agente decide da solo se rispondere o passare il caso a un collega, con uno strumento di handoff. Non c'è un supervisore, e non c'è un grafo. È il pattern più flessibile e il più difficile da prevedere: niente nella struttura impedisce a due agenti di rimbalzarsi un caso. Per questo Strands ha limiti espliciti:</p>
 <table>
   <tr><th>Limite</th><th>Nel nostro swarm</th><th>Cosa ferma</th></tr>
   <tr><td><code>max_handoffs</code></td><td>4</td><td>i passaggi fra agenti, in tutto</td></tr>
@@ -74,7 +74,7 @@ agentcore deploy</code></pre></div>
 
 <div class="riquadro concetto"><span class="titolo">Il limite non basta: serve gestire il fallimento</span>
 <p>Un limite trasforma un ciclo infinito in un fallimento, e un fallimento va gestito come nel Lab 5: se lo stato non è <code>COMPLETED</code>, il codice deve rispondere con una frase fissa e, se serve, aprire un ticket. Lasciare al cliente l'ultima frase di un agente interrotto è il modo più veloce per fare una promessa sbagliata. Come esercizio, aggiungi questo controllo a <code>gestisci_caso</code> in <code>sciame.py</code>.</p>
-<p>Uno swarm ha senso quando non sai in anticipo quale agente serve e in che ordine, per esempio nella ricerca o nell'analisi aperta. Per un'assistenza clienti con domini chiari, il supervisore o l'instradamento del Lab 4 costano meno e si prevedono meglio.</p>
+<p>Uno swarm ha senso quando non sai in anticipo quale agente serve e in che ordine, per esempio nella ricerca o nell'analisi aperta. Per un'assistenza clienti con domini chiari, il supervisore o il routing deterministico del Lab 4 costano meno e si prevedono meglio.</p>
 </div>
 
 <div class="riquadro regola"><span class="titolo">La regola</span>Senza limiti uno swarm non va in produzione. E quando un limite scatta, la risposta al cliente la scrive il codice, non l'ultimo agente rimasto.</div>

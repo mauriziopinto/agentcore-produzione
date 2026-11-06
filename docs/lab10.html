@@ -59,7 +59,7 @@ done</code></pre></div>
   <div class="blocco"><pre><code>agentcore add online-eval --name MonitorQualita --agent agent \
   --evaluators Builtin.Helpfulness --sampling-rate 100
 agentcore deploy</code></pre></div>
-  <p>In produzione il campione si abbassa, per esempio al 10%: ogni valutazione costa le chiamate al modello giudice. I risultati finiscono in CloudWatch e si vedono nella console, in <em>GenAI Observability</em>, <em>Bedrock AgentCore</em>.</p>
+  <p>In produzione il campione si abbassa, per esempio al 10%: ogni valutazione costa le chiamate al modello che fa da judge. I risultati finiscono in CloudWatch e si vedono nella console, in <em>GenAI Observability</em>, <em>Bedrock AgentCore</em>.</p>
 </li>
 
 <li>
@@ -82,7 +82,7 @@ agentcore deploy</code></pre></div>
 <details><summary>Perché si allarma su <code>SystemErrors</code> e non su <code>UserErrors</code>?</summary>
 <p><code>SystemErrors</code> conta gli errori del servizio, mentre <code>UserErrors</code> di solito indica richieste sbagliate di chi chiama. La guida di AgentCore sul disaster recovery dà la stessa indicazione.</p></details>
 <details><summary>Perché in produzione la valutazione online non va al 100%?</summary>
-<p>Perché ogni sessione valutata costa le chiamate al modello giudice. Un campione è sufficiente per vedere una tendenza; il 100% serve in un lab o per un periodo breve dopo un rilascio importante.</p></details>
+<p>Perché ogni sessione valutata costa le chiamate al modello che fa da judge. Un campione è sufficiente per vedere una tendenza; il 100% serve in un lab o per un periodo breve dopo un rilascio importante.</p></details>
 </div>
 </main>
 </div>

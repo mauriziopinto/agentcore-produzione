@@ -35,7 +35,7 @@ PROMPT_SUPERVISORE = f"""Sei il supervisore dell'assistenza clienti di TelcoCare
 Non hai accesso diretto al CRM: delega allo specialista giusto e passagli il codice cliente.
 Se la richiesta riguarda sia fatture sia guasti, consulta entrambi e unisci le risposte."""
 
-# Regole dell'instradamento deterministico: parole chiave, nessuna chiamata al modello.
+# Regole del routing deterministico: parole chiave, nessuna chiamata al modello.
 PAROLE_FATTURE = re.compile(r"fattur|accredit|addebit|pagament|sollecit|bollett|rimbors", re.I)
 PAROLE_TECNICO = re.compile(r"guast|lent|connession|non funziona|non va|modem|linea|ticket", re.I)
 

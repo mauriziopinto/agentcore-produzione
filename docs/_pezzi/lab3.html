@@ -1,7 +1,7 @@
 <!-- titolo: Lab 3 · Il controllo sta fuori dal modello -->
 <h1>Lab 3 · Il controllo sta fuori dal modello</h1>
 <p class="sottotitolo">Una pagina web ordina all'agente un accredito da 200 euro. Vedi chi ci casca e chi lo ferma, poi metti una persona fra l'agente e i soldi. Venticinque minuti.</p>
-<p class="lens">Agentic AI Lens: AGENTSEC08 (validare input e output) e AGENTSEC04 (guardrail e approvazione umana per le decisioni critiche).</p>
+<p class="lens">Agentic AI Lens: AGENTSEC08 (validare input e output) e AGENTSEC04 (guardrail e human-in-the-loop per le decisioni critiche).</p>
 
 <div class="riquadro concetto"><span class="titolo">Concetto: la prompt injection indiretta</span>
 <p>Un agente legge testo che non ha scritto nessuno di fidato: pagine web, email, documenti, risultati degli strumenti. Se quel testo contiene istruzioni, il modello può eseguirle come se venissero dall'utente. La pagina di questo lab sembra un'offerta di TelcoCare, ma contiene una riga scritta in bianco, in caratteri minuscoli, che chiede all'agente di registrare un accredito da 200 euro senza dirlo al cliente.</p>
@@ -28,7 +28,7 @@ done</code></pre></div>
   --query 'events[].message' --output text
 agentcore logs runtime --since 15m --level error | grep -o "Tool Execution Denied[^\"]*" | head -3</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
-  Nessun accredito da 200 euro nei log della Lambda: il Gateway lo ha rifiutato prima di chiamarla, perché la regola Cedar non consente accrediti sopra i 100 euro. Se nei log vedi accrediti da 14 o 15 euro, vengono dalle prove del Lab 2. Nei log del Runtime trovi il rifiuto, <code>Tool Execution Denied: Tool call not allowed due to policy enforcement [No policy applies to the request (denied by default).]</code>.</div>
+  Nessun accredito da 200 euro nei log della Lambda: il Gateway lo ha rifiutato prima di chiamarla, perché la regola Cedar non consente accrediti sopra i 100 euro. Se nei log vedi accrediti da 14 o 15 euro, vengono dai test del Lab 2. Nei log del Runtime trovi il rifiuto, <code>Tool Execution Denied: Tool call not allowed due to policy enforcement [No policy applies to the request (denied by default).]</code>.</div>
 </li>
 
 <li>
@@ -111,5 +111,5 @@ python3 ../scripts/chiedi.py --utente op4 --sessione a150 --approva "INCOLLA-QUI
 <details><summary>Che differenza c'è fra la regola Cedar e l'hook di approvazione?</summary>
 <p>La regola Cedar sta nel Gateway e vale per chiunque lo chiami, anche per un altro agente. L'hook sta nel codice di questo agente e può fare cose che Cedar non fa, come fermarsi e aspettare una persona. Il tetto va messo nel punto più esterno, il Gateway.</p></details>
 <details><summary>Cosa succede se il responsabile approva un accredito da 150 euro?</summary>
-<p>Il Gateway lo rifiuta lo stesso, perché la regola Cedar non consente accrediti sopra i 100 euro. L'approvazione umana non può superare il tetto.</p></details>
+<p>Il Gateway lo rifiuta lo stesso, perché la regola Cedar non consente accrediti sopra i 100 euro. Neanche l'approvazione di una persona può superare il tetto.</p></details>
 </div>

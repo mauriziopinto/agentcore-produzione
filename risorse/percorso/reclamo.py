@@ -1,10 +1,10 @@
-"""Lab 6: la gestione di un reclamo come grafo a passi fissi, con un controllore finale.
+"""Lab 6: la gestione di un reclamo come grafo a passi fissi, con un evaluator finale.
 
 I passi e il loro ordine li decide il codice (gli archi del grafo), non il modello:
-  verifica -> [solo se c'è un addebito errato] rimborso -> redattore -> controllore
-                                                              ^             |
+  verifica -> [solo se c'è un addebito errato] rimborso -> redattore -> evaluator
+                                                              ^            |
                                                               +-- da rifare +
-Il modello lavora solo dentro i singoli passi. Il controllore (pattern evaluator-optimizer)
+Il modello lavora solo dentro i singoli passi. L'evaluator (pattern evaluator-optimizer)
 legge la bozza di risposta e la rimanda al redattore se non rispetta le regole.
 """
 from strands import Agent
@@ -31,7 +31,7 @@ def nessun_addebito_errato(state) -> bool:
 
 
 def da_rifare(state) -> bool:
-    return "DA RIFARE" in _testo(state, "controllore").upper()
+    return "DA RIFARE" in _testo(state, "evaluator").upper()
 
 
 def costruisci_grafo():
@@ -51,10 +51,10 @@ Usa l'importo in eccesso indicato dalla verifica, arrotondato all'euro intero pi
     redattore = Agent(
         name="redattore", model=load_model(), callback_handler=None,
         system_prompt=f"""Scrivi la risposta finale al cliente sul suo reclamo, dandogli del Lei. {STILE}
-Usa solo i fatti dei passi precedenti. Se il controllore ti ha chiesto correzioni, applicale tutte.""",
+Usa solo i fatti dei passi precedenti. Se l'evaluator ti ha chiesto correzioni, applicale tutte.""",
     )
-    controllore = Agent(
-        name="controllore", model=load_model(), callback_handler=None,
+    evaluator = Agent(
+        name="evaluator", model=load_model(), callback_handler=None,
         system_prompt=f"""Controlli la risposta del redattore prima che arrivi al cliente. {STILE}
 Regole: deve citare il numero della fattura; se c'è stato un accredito deve indicarne l'importo esatto;
 non deve promettere tempi o sconti non registrati; non deve superare 120 parole.
@@ -66,12 +66,12 @@ dall'elenco delle correzioni.""",
     g.add_node(verifica, "verifica")
     g.add_node(rimborso, "rimborso")
     g.add_node(redattore, "redattore")
-    g.add_node(controllore, "controllore")
+    g.add_node(evaluator, "evaluator")
     g.add_edge("verifica", "rimborso", condition=addebito_errato)
     g.add_edge("verifica", "redattore", condition=nessun_addebito_errato)
     g.add_edge("rimborso", "redattore")
-    g.add_edge("redattore", "controllore")
-    g.add_edge("controllore", "redattore", condition=da_rifare)
+    g.add_edge("redattore", "evaluator")
+    g.add_edge("evaluator", "redattore", condition=da_rifare)
     g.set_entry_point("verifica")
     # Limiti obbligatori con un ciclo nel grafo: al massimo 8 passi e 3 minuti in tutto.
     g.set_max_node_executions(8)
@@ -85,13 +85,13 @@ async def gestisci_reclamo(testo_reclamo: str) -> tuple[str, dict]:
     grafo = costruisci_grafo()
     risultato = await grafo.invoke_async(testo_reclamo)
     ordine = [n.node_id for n in risultato.execution_order]
-    # La risposta è l'ultima bozza del redattore, quella che il controllore ha visto per ultima.
+    # La risposta è l'ultima bozza del redattore, quella che l'evaluator ha visto per ultima.
     ultima_bozza = ""
     nodo = risultato.results.get("redattore")
     if nodo is not None:
         ultima_bozza = str(nodo.result)
     uso = risultato.accumulated_usage
-    esito_controllo = str(risultato.results["controllore"].result).strip() if "controllore" in risultato.results else ""
+    esito_controllo = str(risultato.results["evaluator"].result).strip() if "evaluator" in risultato.results else ""
     return ultima_bozza, {
         "percorso": " -> ".join(ordine),
         "stato": str(risultato.status),

@@ -93,7 +93,7 @@ def create_app():
     async def invoke(payload, context):
         session_id = getattr(context, "session_id", None) or "default-session"
 
-        # Lab 6: il reclamo segue un grafo a passi fissi, con un controllore finale.
+        # Lab 6: il reclamo segue un grafo a passi fissi, con un evaluator finale.
         if payload.get("modalita") == "reclamo":
             domanda, _ = parse_payload(payload)
             testo, info = await gestisci_reclamo(domanda)
@@ -110,7 +110,7 @@ def create_app():
             yield {"grafo": info}
             return
 
-        # Lab 4 e Lab 9: agente singolo, supervisore, instradamento, specialista remoto via A2A.
+        # Lab 4 e Lab 9: agente singolo, supervisore, routing deterministico, specialista remoto via A2A.
         modalita = payload.get("modalita")
         if modalita in MODALITA:
             domanda, _ = parse_payload(payload)

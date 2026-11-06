@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lab 4: manda le stesse domande all'agente singolo, al supervisore e all'instradamento,
+"""Lab 4: manda le stesse domande all'agente singolo, al supervisore e al routing deterministico,
 e confronta token, chiamate al modello e tempi.
 
 Uso (dalla cartella del progetto TelcoCare):

@@ -17,12 +17,12 @@
 <nav class="indice"></nav>
 <main>
 <h1>Lab 4 · Più agenti solo se serve</h1>
-<p class="sottotitolo">La stessa domanda a un agente solo, a un supervisore con due specialisti e a una regola che instrada. Poi i numeri. Venticinque minuti.</p>
+<p class="sottotitolo">La stessa domanda a un agente solo, a un supervisore con due specialisti e a una regola di routing. Poi i numeri. Venticinque minuti.</p>
 <p class="lens">Agentic AI Lens: AGENTPERF05 (pattern di orchestrazione), AGENTCOST01-BP03 (hybrid supervisor), AGENTCOST05 (costi attribuiti a ogni agente).</p>
 
 <div class="riquadro concetto"><span class="titolo">Concetto: due pattern</span>
 <p><strong>Supervisore con specialisti</strong> (in Strands, <em>agents as tools</em>). Un agente principale non tocca il CRM: delega a uno specialista fatturazione e a uno specialista tecnico, che usa come strumenti. Ogni specialista ha il suo contesto e i suoi strumenti.</p>
-<p><strong>Instradamento deterministico</strong>. La lens lo chiama <em>hybrid supervisor</em>: una regola, qui alcune parole chiave, sceglie lo specialista senza chiamare il modello. Solo le richieste che la regola non sa classificare salgono al supervisore.</p>
+<p><strong>Routing deterministico</strong>. La lens lo chiama <em>hybrid supervisor</em>: una regola, qui alcune parole chiave, sceglie lo specialista senza chiamare il modello. Solo le richieste che la regola non sa classificare salgono al supervisore.</p>
 </div>
 
 <div class="blocco"><span class="etichetta">app/agent/squadra.py (estratto)</span><pre><code>PAROLE_FATTURE = re.compile(r"fattur|accredit|addebit|pagament|sollecit|bollett|rimbors", re.I)
@@ -82,7 +82,7 @@ Totale sulle tre domande:
 </ol>
 
 <div class="riquadro concetto"><span class="titolo">Come leggere i numeri</span>
-<p>Con quattro strumenti e tre domande l'agente unico vince: costa meno ed è più veloce. Il supervisore quasi raddoppia token e tempi, perché ogni domanda passa da due modelli. L'instradamento recupera buona parte del costo sulle domande chiare, e sulle domande miste costa come il supervisore.</p>
+<p>Con quattro strumenti e tre domande l'agente unico vince: costa meno ed è più veloce. Il supervisore quasi raddoppia token e tempi, perché ogni domanda passa da due modelli. Il routing deterministico recupera buona parte del costo sulle domande chiare, e sulle domande miste costa come il supervisore.</p>
 <p>Più agenti convengono quando ci sono motivi che questi numeri non mostrano: tanti strumenti diversi che confondono un agente solo, contesti molto lunghi che lo specialista può riassumere, permessi diversi per ogni mestiere, team diversi che sviluppano e pubblicano i propri agenti. Il Lab 9 riprende l'ultimo punto.</p>
 </div>
 
@@ -96,7 +96,7 @@ Totale sulle tre domande:
 <h2>Hai capito?</h2>
 <details><summary>Perché il supervisore costa quasi il doppio dell'agente singolo?</summary>
 <p>Perché ogni richiesta passa almeno da due modelli: il supervisore legge la domanda e decide, lo specialista lavora, e poi il supervisore rilegge il risultato e scrive la risposta. Ogni passaggio rilegge anche il proprio contesto.</p></details>
-<details><summary>Cosa guadagni con l'instradamento deterministico?</summary>
+<details><summary>Cosa guadagni con il routing deterministico?</summary>
 <p>Sulle domande che una regola sa classificare salti il supervisore: meno token e meno tempo. Sulle domande che la regola non sa classificare paghi come prima. Conviene quando la maggior parte del traffico è chiara.</p></details>
 <details><summary>Perché è importante sommare i token per agente?</summary>
 <p>Perché il costo totale non dice dove intervenire. Con il conto per agente vedi, per esempio, che il supervisore costa più degli specialisti, e puoi decidere di sostituirlo con una regola o con un modello più piccolo.</p></details>

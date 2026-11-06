@@ -1,16 +1,16 @@
 <!-- titolo: Lab 2 · Rilascio reversibile -->
 <h1>Lab 2 · Rilascio reversibile</h1>
-<p class="sottotitolo">I clienti usano una versione fissa. La nuova si prova accanto, si promuove solo se passa le prove, e si torna indietro in un minuto. Venticinque minuti.</p>
+<p class="sottotitolo">I clienti usano una versione fissa. La nuova si prova accanto, si promuove solo se passa i test, e il rollback richiede un minuto. Venticinque minuti.</p>
 <p class="lens">Agentic AI Lens: pilastro Operational excellence (AGENTOPS), rilasci e gestione delle versioni.</p>
 
 <div class="riquadro concetto"><span class="titolo">Concetto: versioni ed endpoint del Runtime</span>
 <p>Ogni deploy che cambia il codice crea una nuova <em>versione</em> del Runtime. L'endpoint <code>DEFAULT</code> segue sempre l'ultima. Puoi creare altri endpoint con un nome, per esempio <code>produzione</code>, che restano fermi sulla versione che scegli tu.</p>
-<p>I clienti chiamano <code>produzione</code>. Il team prova le novità su <code>DEFAULT</code>. Promuovere vuol dire spostare <code>produzione</code> su un'altra versione; tornare indietro vuol dire spostarlo sulla versione di prima.</p>
+<p>I clienti chiamano <code>produzione</code>. Il team prova le novità su <code>DEFAULT</code>. Promuovere vuol dire spostare <code>produzione</code> su un'altra versione; fare rollback vuol dire spostarlo sulla versione di prima.</p>
 </div>
 
 <ol class="passi">
 <li>
-  <p>Leggi quale versione serve <code>DEFAULT</code> adesso. È quella che nel Lab 1 ha passato le prove.</p>
+  <p>Leggi quale versione serve <code>DEFAULT</code> adesso. È quella che nel Lab 1 ha passato i test.</p>
   <div class="blocco"><pre><code>VERSIONE_BUONA=$(python3 ../scripts/id.py versione)
 echo $VERSIONE_BUONA</code></pre></div>
 </li>
@@ -41,21 +41,21 @@ python3 ../scripts/chiedi.py --utente mario --sessione nuova "Sono il cliente C0
 </li>
 
 <li>
-  <p>Prima di promuovere, il cancello del Lab 1 sulla versione nuova.</p>
+  <p>Prima di promuovere, il quality gate del Lab 1 sulla versione nuova.</p>
   <div class="blocco"><pre><code>bash ../scripts/prove.sh DEFAULT</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
-  Nelle nostre due prove il cancello si è chiuso entrambe le volte, con 5 e poi 7 prove superate su 8. Nella prima, nella prova <code>accredito-motivato</code>, la versione con Haiku ha emesso <strong>due accrediti senza leggere la fattura</strong>:
+  Nelle nostre due prove il quality gate si è chiuso entrambe le volte, con 5 e poi 7 test superati su 8. Nella prima, nel test <code>accredito-motivato</code>, la versione con Haiku ha emesso <strong>due accrediti senza leggere la fattura</strong>:
   <pre class="uscita">accredito-motivato    NO                        NO
     TrajectoryAnyOrderMatch: Any-order mismatch: Missing tools: 'crm___get_fatture' ...
     Actual: ['crm___emetti_accredito', 'crm___emetti_accredito']
 ...
-Prove superate: 5 su 8 (62%), soglia 100%
-CANCELLO CHIUSO: questa versione non va rilasciata.</pre>
-  Il risparmio del modello più piccolo, qui, si pagava in accrediti sbagliati. Le prove lo hanno trovato prima dei clienti.</div>
+Test superati: 5 su 8 (62%), soglia 100%
+QUALITY GATE CHIUSO: questa versione non va rilasciata.</pre>
+  Il risparmio del modello più piccolo, qui, si pagava in accrediti sbagliati. I test lo hanno trovato prima dei clienti.</div>
 </li>
 
 <li>
-  <p>La versione nuova non va promossa. Per vedere come funziona il ritorno indietro, facciamo finta che qualcuno l'abbia promossa lo stesso. Prendi nota della versione nuova e sposta <code>produzione</code>.</p>
+  <p>La versione nuova non va promossa. Per vedere come funziona il rollback, facciamo finta che qualcuno l'abbia promossa lo stesso. Prendi nota della versione nuova e sposta <code>produzione</code>.</p>
   <div class="blocco"><pre><code>VERSIONE_NUOVA=$(python3 ../scripts/id.py versione)
 python3 ../scripts/punta_endpoint.py produzione $VERSIONE_NUOVA
 agentcore deploy
@@ -64,31 +64,31 @@ python3 ../scripts/chiedi.py --endpoint produzione --utente mario --sessione pro
 </li>
 
 <li>
-  <p>Torna indietro.</p>
+  <p>Fai il rollback.</p>
   <div class="blocco"><pre><code>python3 ../scripts/punta_endpoint.py produzione $VERSIONE_BUONA
 agentcore deploy
 python3 ../scripts/chiedi.py --endpoint produzione --utente mario --sessione prod3 "Sono il cliente C001, che offerta ho?"</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
-  <code>agentcore runtime endpoint list</code> mostra <code>produzione</code> di nuovo sulla versione buona. Nelle nostre prove sia la promozione sia il ritorno indietro hanno richiesto circa 70 secondi ciascuno. Il codice non si ricostruisce: cambia solo la versione a cui punta l'endpoint.</div>
+  <code>agentcore runtime endpoint list</code> mostra <code>produzione</code> di nuovo sulla versione buona. Nelle nostre prove sia la promozione sia il rollback hanno richiesto circa 70 secondi ciascuno. Il codice non si ricostruisce: cambia solo la versione a cui punta l'endpoint.</div>
 </li>
 </ol>
 
 <div class="riquadro concetto"><span class="titolo">Perché la versione sta in agentcore.json</span>
-<p><code>punta_endpoint.py</code> cambia una riga di <code>agentcore/agentcore.json</code>. La promozione diventa una modifica del progetto, che si rivede e si approva come il codice, e il ritorno indietro è l'annullamento di quella modifica.</p>
+<p><code>punta_endpoint.py</code> cambia una riga di <code>agentcore/agentcore.json</code>. La promozione diventa una modifica del progetto, che si rivede e si approva come il codice, e il rollback è l'annullamento di quella modifica.</p>
 </div>
 
 <div class="riquadro attenzione"><span class="titolo">Da qui in poi</span>
 <p><code>DEFAULT</code> resta sulla versione con Haiku fino al prossimo deploy. Il Lab 3 riparte da Claude Sonnet 5.5, quindi non devi fare nulla.</p>
 </div>
 
-<div class="riquadro regola"><span class="titolo">La regola</span>Ogni rilascio si annulla in un minuto. I clienti usano una versione fissa, la nuova si prova accanto e si promuove solo dopo le prove.</div>
+<div class="riquadro regola"><span class="titolo">La regola</span>Ogni rilascio si annulla in un minuto. I clienti usano una versione fissa, la nuova si prova accanto e si promuove solo dopo i test.</div>
 
 <div class="verifica-capito">
 <h2>Hai capito?</h2>
 <details><summary>Perché i clienti non devono chiamare l'endpoint DEFAULT?</summary>
-<p>Perché <code>DEFAULT</code> si sposta da solo a ogni deploy. Qualunque modifica pubblicata, anche quella con Haiku, arriverebbe subito ai clienti, senza prove e senza una decisione.</p></details>
+<p>Perché <code>DEFAULT</code> si sposta da solo a ogni deploy. Qualunque modifica pubblicata, anche quella con Haiku, arriverebbe subito ai clienti, senza test e senza una decisione.</p></details>
 <details><summary>Il passaggio a un modello più piccolo è sempre una cattiva idea?</summary>
-<p>No. In questo caso le prove hanno mostrato un problema preciso, gli accrediti fatti senza verificare. Con un prompt più rigido o un controllo sugli strumenti il risparmio potrebbe diventare accettabile. Si decide con le prove, non a sensazione.</p></details>
-<details><summary>Cosa ti serve per tornare indietro in un minuto?</summary>
+<p>No. In questo caso i test hanno mostrato un problema preciso, gli accrediti fatti senza verificare. Con un prompt più rigido o un controllo sugli strumenti il risparmio potrebbe diventare accettabile. Si decide con i test, non a sensazione.</p></details>
+<details><summary>Cosa ti serve per fare rollback in un minuto?</summary>
 <p>Sapere qual era la versione buona, e avere un endpoint che i clienti usano e che puoi spostare. Il codice della versione vecchia è già lì: non devi ricostruire niente.</p></details>
 </div>
