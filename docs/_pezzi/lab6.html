@@ -47,7 +47,7 @@ g.set_execution_timeout(180)</code></pre></div>
   Niente rimborso. Nella nostra prova l'evaluator ha rimandato indietro la prima bozza, e il percorso è stato:
   <pre class="uscita">[percorso] verifica -&gt; redattore -&gt; evaluator -&gt; redattore -&gt; evaluator  [stato] Status.COMPLETED
 [ultimo controllo] APPROVATO</pre>
-  Il ciclo si vede solo quando la prima bozza viola una regola. Se nel tuo caso non succede, rendi l'evaluator più severo: in <code>app/agent/reclamo.py</code> abbassa il limite di 120 parole a 50, pubblica e riprova.</div>
+  Il ciclo si vede solo quando la prima bozza viola una regola. Se nel tuo caso non succede, rendi l'evaluator più severo: in <code>app/agent/reclamo.py</code> abbassa il limite di 120 parole a 50, pubblica e ripeti la domanda con una sessione nuova, per esempio <code>--sessione reclamo3</code>: una sessione già usata resta sulla versione su cui è partita.</div>
 </li>
 </ol>
 
