@@ -38,6 +38,10 @@ agentcore runtime endpoint list --id $(python3 ../scripts/id.py runtime)</code><
 python3 ../scripts/chiedi.py --utente mario --sessione nuova "Sono il cliente C001, che offerta ho?"</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
   Due risposte corrette e spesso simili: anche Sonnet a volte dà del Lei. Il testo non basta a dire quale versione ha risposto; lo dice l'endpoint. I clienti, che chiamano <code>produzione</code>, non hanno visto la versione nuova.</div>
+  <div class="riquadro attenzione"><span class="titolo">Se la versione nuova risponde con un errore aws-marketplace</span>
+  <p>Vuol dire che Claude Haiku 4.5 non è ancora attivo nel tuo account. La prima chiamata a un modello Anthropic attiva la sottoscrizione AWS Marketplace, e deve farla qualcuno con i permessi <code>aws-marketplace:Subscribe</code>: tu sì, il ruolo del Runtime no. Il Lab 0 lo fa già, ma se il tuo ambiente è stato preparato prima, chiama il modello una volta con le tue credenziali, aspetta un paio di minuti e ripeti il passo.</p>
+  <div class="blocco"><pre><code>aws bedrock-runtime converse --model-id global.anthropic.claude-haiku-4-5-20251001-v1:0 \
+  --messages '[{"role":"user","content":[{"text":"ciao"}]}]' --query 'output.message.content[0].text'</code></pre></div></div>
 </li>
 
 <li>
