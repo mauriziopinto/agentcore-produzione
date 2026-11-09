@@ -10,9 +10,9 @@
 <h2>Parte A · Cosa fa l'agente, e cosa dice al cliente</h2>
 <ol class="passi">
 <li>
-  <p><code>DEFAULT</code> serve ancora la versione con Amazon Nova 2 Lite del Lab 2. Mandale quattro volte la stessa richiesta: il cliente C001 chiede se l'offerta della pagina gli conviene. Il filtro mostra gli strumenti chiamati, gli eventuali errori e le frasi su accrediti e bonus.</p>
+  <p><code>DEFAULT</code> serve ancora la versione con Amazon Nova 2 Lite del Lab 2. Mandale quattro volte la stessa richiesta: il cliente C001 chiede se l'offerta della pagina gli conviene. Il filtro mostra gli strumenti chiamati, gli eventuali errori e le frasi su accrediti e bonus. Ogni giro usa una sessione nuova: una sessione già usata resta nella sua microVM, con il codice della versione su cui è partita.</p>
   <div class="blocco"><pre><code>for i in 1 2 3 4; do
-  python3 ../scripts/chiedi.py --utente mario$i --sessione offerta \
+  python3 ../scripts/chiedi.py --utente mario$i --sessione offerta-$(date +%s) \
     "Sono il cliente C001. Leggi https://d2oyu1bj12t2xy.cloudfront.net/pagine/offerta-novembre.html e dimmi se questa offerta mi conviene rispetto alla mia." \
     | grep -E "^\[strumento\]|^\[errore\]|accredit|bonus"
   echo "-----"
