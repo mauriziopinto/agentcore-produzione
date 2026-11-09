@@ -23,7 +23,7 @@ agentcore deploy</code></pre></div>
 </li>
 
 <li>
-  <p>Arriva una proposta: passare da Claude Sonnet 5.5 a Claude Haiku 4.5, più veloce e meno caro, e dare sempre del Lei ai clienti. Pubblicala: va su <code>DEFAULT</code>, non su <code>produzione</code>.</p>
+  <p>Arriva una proposta: passare da Claude Sonnet 5.5 ad Amazon Nova 2 Lite, un modello più piccolo e meno caro, e dare sempre del Lei ai clienti. Pubblicala: va su <code>DEFAULT</code>, non su <code>produzione</code>.</p>
   <div class="blocco"><pre><code>cp ../risorse/lab2/main.py app/agent/main.py
 cp ../risorse/lab2/load.py app/agent/model/load.py
 agentcore deploy
@@ -38,24 +38,23 @@ agentcore runtime endpoint list --id $(python3 ../scripts/id.py runtime)</code><
 python3 ../scripts/chiedi.py --utente mario --sessione nuova "Sono il cliente C001, che offerta ho?"</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
   Due risposte corrette e spesso simili: anche Sonnet a volte dà del Lei. Il testo non basta a dire quale versione ha risposto; lo dice l'endpoint. I clienti, che chiamano <code>produzione</code>, non hanno visto la versione nuova.</div>
-  <div class="riquadro attenzione"><span class="titolo">Se la versione nuova risponde con un errore aws-marketplace</span>
-  <p>Vuol dire che Claude Haiku 4.5 non è ancora attivo nel tuo account. La prima chiamata a un modello Anthropic attiva la sottoscrizione AWS Marketplace, e deve farla qualcuno con i permessi <code>aws-marketplace:Subscribe</code>: tu sì, il ruolo del Runtime no. Il Lab 0 lo fa già, ma se il tuo ambiente è stato preparato prima, chiama il modello una volta con le tue credenziali, aspetta un paio di minuti e ripeti il passo.</p>
-  <div class="blocco"><pre><code>aws bedrock-runtime converse --model-id global.anthropic.claude-haiku-4-5-20251001-v1:0 \
-  --messages '[{"role":"user","content":[{"text":"ciao"}]}]' --query 'output.message.content[0].text'</code></pre></div></div>
 </li>
 
 <li>
   <p>Prima di promuovere, il quality gate del Lab 1 sulla versione nuova.</p>
   <div class="blocco"><pre><code>bash ../scripts/prove.sh DEFAULT</code></pre></div>
   <div class="riquadro verifica"><span class="titolo">Cosa dovresti vedere</span>
-  Nelle nostre due prove il quality gate si è chiuso entrambe le volte, con 5 e poi 7 test superati su 8. Nella prima, nel test <code>accredito-motivato</code>, la versione con Haiku ha emesso <strong>due accrediti senza leggere la fattura</strong>:
-  <pre class="uscita">accredito-motivato    NO                        NO
-    TrajectoryAnyOrderMatch: Any-order mismatch: Missing tools: 'crm___get_fatture' ...
-    Actual: ['crm___emetti_accredito', 'crm___emetti_accredito']
+  Nelle nostre due prove il quality gate si è chiuso entrambe le volte, con 7 e poi 6 test superati su 8. La versione con Nova ha letto le fatture giuste, ma nella fattura doppia non ha citato l'importo di settembre. Nel secondo giro, davanti a un canone addebitato due volte, <strong>ha chiesto al cliente di confermare il canone invece di proporre l'accredito</strong>:
+  <pre class="uscita">accredito-motivato    NO                        ok
+    GoalSuccessRate: ... the agent failed to propose or register a credit of 14.99 euros. Instead,
+    the agent asked the customer to confirm the correct monthly fee amount ...
 ...
-Test superati: 5 su 8 (62%), soglia 100%
+fattura-doppia        NO                        ok
+    GoalSuccessRate: ... the September amount of €14.99 is not explicitly mentioned in the response ...
+...
+Test superati: 6 su 8 (75%), soglia 100%
 QUALITY GATE CHIUSO: questa versione non va rilasciata.</pre>
-  Il risparmio del modello più piccolo, qui, si pagava in accrediti sbagliati. I test lo hanno trovato prima dei clienti.</div>
+  Gli strumenti chiamati sono quelli giusti, quindi il controllo esatto passa: a bocciare la versione è il judge, che legge le risposte. Il risparmio del modello più piccolo, qui, si pagava in risposte incomplete e in un rimborso non proposto. I test lo hanno trovato prima dei clienti.</div>
 </li>
 
 <li>
@@ -64,7 +63,7 @@ QUALITY GATE CHIUSO: questa versione non va rilasciata.</pre>
 python3 ../scripts/punta_endpoint.py produzione $VERSIONE_NUOVA
 agentcore deploy
 python3 ../scripts/chiedi.py --endpoint produzione --utente mario --sessione prod2 "Sono il cliente C001, che offerta ho?"</code></pre></div>
-  <p>Controlla con <code>agentcore runtime endpoint list --id $(python3 ../scripts/id.py runtime)</code>: ora <code>produzione</code> serve la versione con Haiku, cioè la vedono i clienti.</p>
+  <p>Controlla con <code>agentcore runtime endpoint list --id $(python3 ../scripts/id.py runtime)</code>: ora <code>produzione</code> serve la versione con Nova, cioè la vedono i clienti.</p>
 </li>
 
 <li>
@@ -82,7 +81,7 @@ python3 ../scripts/chiedi.py --endpoint produzione --utente mario --sessione pro
 </div>
 
 <div class="riquadro attenzione"><span class="titolo">Da qui in poi</span>
-<p><code>DEFAULT</code> resta sulla versione con Haiku fino al prossimo deploy. Il Lab 3 riparte da Claude Sonnet 5.5, quindi non devi fare nulla.</p>
+<p><code>DEFAULT</code> resta sulla versione con Nova fino al prossimo deploy. La Parte A del Lab 3 la usa così com'è, poi il Lab 3 riparte da Claude Sonnet 5.5: non devi fare nulla.</p>
 </div>
 
 <div class="riquadro regola"><span class="titolo">La regola</span>Ogni rilascio si annulla in un minuto. I clienti usano una versione fissa, la nuova si prova accanto e si promuove solo dopo i test.</div>
@@ -90,9 +89,9 @@ python3 ../scripts/chiedi.py --endpoint produzione --utente mario --sessione pro
 <div class="verifica-capito">
 <h2>Hai capito?</h2>
 <details><summary>Perché i clienti non devono chiamare l'endpoint DEFAULT?</summary>
-<p>Perché <code>DEFAULT</code> si sposta da solo a ogni deploy. Qualunque modifica pubblicata, anche quella con Haiku, arriverebbe subito ai clienti, senza test e senza una decisione.</p></details>
+<p>Perché <code>DEFAULT</code> si sposta da solo a ogni deploy. Qualunque modifica pubblicata, anche quella con Nova, arriverebbe subito ai clienti, senza test e senza una decisione.</p></details>
 <details><summary>Il passaggio a un modello più piccolo è sempre una cattiva idea?</summary>
-<p>No. In questo caso i test hanno mostrato un problema preciso, gli accrediti fatti senza verificare. Con un prompt più rigido o un controllo sugli strumenti il risparmio potrebbe diventare accettabile. Si decide con i test, non a sensazione.</p></details>
+<p>No. In questo caso i test hanno mostrato problemi precisi: importi non citati e un rimborso non proposto. Con un prompt più preciso il risparmio potrebbe diventare accettabile, e lo direbbe lo stesso quality gate. Si decide con i test, non a sensazione.</p></details>
 <details><summary>Cosa ti serve per fare rollback in un minuto?</summary>
 <p>Sapere qual era la versione buona, e avere un endpoint che i clienti usano e che puoi spostare. Il codice della versione vecchia è già lì: non devi ricostruire niente.</p></details>
 </div>

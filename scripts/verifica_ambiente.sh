@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # Lab 0: controlla che l'ambiente abbia tutto quello che serve al workshop.
-# Non crea risorse: legge versioni e fa una chiamata di prova a ognuno dei due modelli del workshop.
-# La prima chiamata a un modello Anthropic attiva la sottoscrizione AWS Marketplace per tutto l'account,
-# e deve partire da chi ha i permessi aws-marketplace:Subscribe, cioè da te e non dal ruolo del Runtime.
-# Per questo il modello del Lab 2 (Claude Haiku 4.5) si chiama qui, anche se l'agente lo userà solo dopo.
+# Non crea risorse: legge versioni e fa una chiamata di prova a ognuno dei due modelli del workshop,
+# Claude Sonnet 5.5 (tutti i lab) e Amazon Nova 2 Lite (Lab 2 e Parte A del Lab 3).
 
 REGIONE="${AWS_REGION:-us-east-1}"
-MODELLI="global.anthropic.claude-sonnet-5-5 global.anthropic.claude-haiku-4-5-20251001-v1:0"
+MODELLI="global.anthropic.claude-sonnet-5-5 global.amazon.nova-2-lite-v1:0"
 CLI_TESTATA="1.0.1"
 ERRORI=0
 
