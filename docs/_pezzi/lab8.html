@@ -75,7 +75,7 @@ aws logs filter-log-events --log-group-name $GRUPPO --start-time $(( T0 * 1000 )
 <div class="riquadro regola"><span class="titolo">La regola</span>L'osservabilità non deve diventare una copia dei dati dei clienti. Si maschera nelle risposte e nei log, si limita la conservazione, e si decide chi può vedere in chiaro.</div>
 
 <div class="verifica-capito">
-<h2>Hai capito?</h2>
+<h2>Per fissare i concetti</h2>
 <details><summary>Perché il guardrail da solo non basta?</summary>
 <p>Perché controlla l'output del modello, non quello che il Runtime scrive nei log. I risultati degli strumenti, con i numeri in chiaro, finiscono nei log prima e indipendentemente dalla risposta.</p></details>
 <details><summary>Chi può leggere i dati in chiaro dopo il passo 4?</summary>
